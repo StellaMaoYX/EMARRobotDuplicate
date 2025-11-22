@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>database.js library</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <link rel="stylesheet" href="styles/index.processed.css">
+</head>
+<body>
+  <div class="container-fluid d-flex align-items-center justify-content-center">
+    <div class="container-fixed">
+      <div class="row mx-1 mt-5">
+        <h1 class="display-4">databasejs</h1>
+      </div>
+      <div class="row mx-1 mb-3 pb-3 border-top">
+        <p>databasejs is a simple wrapper for Firebase Realtime database functionality. See the <a href="https://github.com/mayacakmak/databasejs#databasejs">readme on github</a> to learn more.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== Core dependencies ====== -->
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" crossorigin="anonymous"></script>
+
+  <!-- ====== Firebase SDK (required for Firebase connection) ====== -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+
+  <!-- ====== Firebase configuration file (your firebaseConfig.js) ====== -->
+  <script src="firebase-config.js"></script>
+
+  <!-- ====== Project logic scripts ====== -->
+  <script src="scripts/database.js"></script>
+  <script src="scripts/index.js"></script>
+</body>
+</html>

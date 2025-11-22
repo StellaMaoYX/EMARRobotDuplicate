@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>EMAR Robot Frontend Tools</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <link rel="stylesheet" href="styles/style.processed.css">
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-left" id="topLeft"><a class="btn btn-info" href="index.html"><<</a></div>
+    <div class="topbar-right" id="top"></div>
+  </div>
+  <div class="container-fluid px-sm-5 pb-4">
+    <div class="row">
+      <div class="col text-center">
+        <h1 class="display-4" id="controlTitle">Robot Controller</h1>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col">
+        <div class="card mb-4">
+          <div class="card-header">
+            <h2>Set robot face</h2>
+          </div>
+          <div class="card-body">
+            <div class="h-scrollable green-scroll">
+              <div class="btn-group mr-2 py-2" id="robotFaceList"><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-sm-7">
+        <div class="card">
+          <div class="card-header row">
+            <h2 style="padding-left: 10pt">Set individual robot motors</h2>
+            <div class="col-md align-content-center" id="headTouched">
+              </div>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md">
+                <div class="top-aligned" id="motorControls"><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h2>Set multiple robot motors (at once)</h2>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md">
+                <div style="width: 50%" class="top-aligned" id="motorPoseControls"><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span></div>
+                <div class="preset-controls">
+                  <button type="button" class="btn btn-info" onclick="manualPoseChanged()">Send to Robot</button>
+                  <input class="large-text" type="text" name="savePoseText" id="savePoseText" placeholder="Pose name">
+                  <button type="button" class="btn btn-info" onclick="saveAsPose()">Save as Pose</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h2>Robot poses</h2>
+          </div>
+          <div class="card-body">
+            <div class="top-aligned" id="poseControls"><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h2>Set robot screen</h2>
+          </div>
+          <div class="card-body">
+            <div class="top-aligned" id="screenControls"><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h2>Set robot eyes</h2>
+          </div>
+          <div class="card-body">
+            <div class="top-aligned" id="faceControls"><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h2>Robot speech</h2>
+          </div>
+          <div class="card-body">
+            <div class="preset-controls" id="presetSpeak"><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span></div>
+            <div class="voice">
+              <input class="large-text" type="text" name="speakText" id="speakText" x-webkit-speech>
+              <button class="btn btn-success full-button" id="speak" onclick="speakPressed()">Speak</button>
+            </div>
+            <div class="preset-controls" id="userAdded"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h2>Robot speech bubble</h2>
+          </div>
+          <div class="card-body">
+            <div class="top-aligned" id="bubbleControls">
+              <div class="screen-checkboxes">
+                <input type="checkbox" id="speakAndBubbleCheck"><span>Add bubble to speech?</span><span class="ml-4">Speech bubble duration (sec):</span>
+                <input class="small" type="text" id="bubbleDuration" value="3">
+              </div>
+              <input class="large-text" type="text" name="bubbleInputText" id="bubbleInputText">
+              <button class="btn btn-success full-button" id="sendBubble" onclick="bubblePressed()">Send to speech bubble</button>
+              <button class="btn btn-warning full-button" id="clearBubble" onclick="bubbleClear()">Clear speech bubble</button>
+            </div>
+          </div>
+        </div>
+        <!-- <div class="card">
+          <div class="card-header">
+            <h2>Robot Animations</h2>
+          </div>
+          <div class="card-body">
+            <div class="top-aligned" id="animationControls"><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span></div>
+          </div>
+        </div> -->
+      </div>
+      <div class="col-sm-5">
+        <div class="card">
+          <div class="card-header">
+            <h2>Face preview</h2>
+          </div>
+          <div class="card-body">
+            <div class="left-aligned">
+              <div id="robotFace">
+                <svg id="faceSVG"></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h2>Belly screen preview</h2>
+          </div>
+          <div class="card-body">
+            <div class="screen-box-outer mb-4">
+              <div class="screen-box-inner" id="screenDiv"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+<!-- JQuery + Bootstrap -->
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+<!-- Firebase config + Database API wrapper -->
+<script src="../robotbackend/scripts/config.js"></script>
+<script src="../databasejs/scripts/database.js"></script>
+
+<!-- Robot backend -->
+<script src="../robotbackend/scripts/eyes.js"></script>
+<script src="../robotbackend/scripts/face.js"></script>
+<script src="../robotbackend/scripts/belly.js"></script>
+
+<!-- Robot API -->
+<script src="../robotapijs/scripts/robotapi.js"></script>
+
+<!-- Control page logic -->
+<script src="scripts/facedata.js"></script>
+<script src="scripts/control.js"></script>
+<script>
+  // Initialize Firebase once using the unified Config, then start the controller UI.
+  (function startControlPage() {
+    var config = new Config();
+    var db = new Database(config.config, function () {
+      var robotParam = Config.getURLParameter('robot');
+      var robotId = robotParam != null ? Number(robotParam) : 0;
+      firebase
+        .database()
+        .ref('/robots/' + robotId + '/state/')
+        .once('value')
+        .then(function (snapshot) {
+          var initialState = snapshot && snapshot.val ? snapshot.val() : snapshot;
+          initializeControl(initialState || {}, config.config, robotId);
+        })
+        .catch(function (err) {
+          console.error('Failed to load initial robot state', err);
+          initializeControl({}, config.config, robotId);
+        });
+    });
+  })();
+</script>
+</body>
+</html>
