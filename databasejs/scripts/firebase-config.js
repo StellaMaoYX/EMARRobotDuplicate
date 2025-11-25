@@ -1,12 +1,14 @@
-// Firebase initialization（用你的 key）
-var firebaseConfig = {
-  apiKey: "AIzaSyB10dhQqD1TMXTJfQNLMmFkrJtVyQ4JtUA",
+
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyB10dHhQqD1TMXTJfQNLmFkrJtVyQ4JTuA",
   authDomain: "flexi-f7d77.firebaseapp.com",
   databaseURL: "https://flexi-f7d77-default-rtdb.firebaseio.com",
   projectId: "flexi-f7d77",
-  storageBucket: "flexi-f7d77.appspot.com",
+  storageBucket: "flexi-f7d77.firebasestorage.app",
   messagingSenderId: "441373455093",
-  appId: "1:441373455093:web:038d10e9960e0e08b14bbc"
+  appId: "1:441373455093:web:038d10e9960e0e08b14bbc",
+  measurementId: "G-NNWWSD5BCH"
 };
 
 firebase.initializeApp(firebaseConfig);
