@@ -39,27 +39,32 @@ function Database(config, readyCallback) {
   * Will need to wait for all libraries to be loaded before
   * initializing the database.
   */
-  Database.nLibrariesLoaded = 0;
-  Database.libraryLoadCallback = function(){
-    Database.nLibrariesLoaded++;
-    if (Database.nLibrariesLoaded == 4) {
-      Database.initialize();
-    }
-  }
-  
-  Database.loadJSLibrary = async function(path) {
+  // Load Firebase SDKs sequentially to guarantee firebase-app is ready before auth/db/storage.
+  Database.loadFirebaseLibraries = function() {
+    var scripts = [
+      "https://www.gstatic.com/firebasejs/6.3.0/firebase-app.js",
+      "https://www.gstatic.com/firebasejs/6.3.0/firebase-auth.js",
+      "https://www.gstatic.com/firebasejs/6.3.0/firebase-database.js",
+      "https://www.gstatic.com/firebasejs/5.9.1/firebase-storage.js"
+    ];
+
+    var loadNext = function(index) {
+      if (index >= scripts.length) {
+        Database.initialize();
+        return;
+      }
       var js = document.createElement("script");
       js.type = "text/javascript";
-      js.src = path;
-      js.onreadystatechange = Database.libraryLoadCallback;
-      js.onload = Database.libraryLoadCallback;
+      js.src = scripts[index];
+      js.onload = function() { loadNext(index + 1); };
+      js.onerror = Database.handleError;
       document.head.appendChild(js);
-  }
+    };
 
-  Database.loadJSLibrary(src="https://www.gstatic.com/firebasejs/6.3.0/firebase-app.js");
-  Database.loadJSLibrary(src="https://www.gstatic.com/firebasejs/6.3.0/firebase-auth.js");
-  Database.loadJSLibrary(src="https://www.gstatic.com/firebasejs/6.3.0/firebase-database.js");
-  Database.loadJSLibrary(src="https://www.gstatic.com/firebasejs/5.9.1/firebase-storage.js");
+    loadNext(0);
+  };
+
+  Database.loadFirebaseLibraries();
 
   Database.signInAnonymously = function() {
     if (Database.uid == null && Database.userEmail == null) {
