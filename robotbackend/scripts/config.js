@@ -11,6 +11,7 @@ const firebaseConfig = {
 };
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 
+var DEFAULT_FIREBASE_CONFIG = firebaseConfig;
 
 function Config() {
   var selectedConfig = Config.getFirebaseConfig();

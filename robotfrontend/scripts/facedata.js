@@ -188,6 +188,8 @@ function updateRobotFaceList(snapshot) {
 }
 
 function selectedRobotFaceChanged(target, index) {
+  if (!target) return; // 保险：没有元素时直接退出
+
   var allFaceImgs = document.getElementsByClassName("face-thumb");
   for (var i=0; i<allFaceImgs.length; i++) {
     allFaceImgs[i].style.border = "5px transparent solid";
@@ -202,9 +204,14 @@ function selectedRobotFaceChanged(target, index) {
 
 /* Callback function for when a different face is selected by the user through clicking a thumb*/
 function selectedFaceChanged(target, user, index) {
-  hasNewParams = true;
-  
   var allFaceImgs = document.getElementsByClassName("face-thumb");
+  if (!target) {
+    // 如果没有传入元素，尽量取第一个缩略图；否则放弃更新以避免报错
+    target = allFaceImgs.length > 0 ? allFaceImgs[0] : null;
+  }
+  if (!target) return;
+
+  hasNewParams = true;
   for (var i=0; i<allFaceImgs.length; i++) {
     allFaceImgs[i].style.border = "5px transparent solid";
   }
