@@ -35,9 +35,10 @@ function Face() {
 
     var faceDiv = document.getElementById("robotFace");
     var faceWidth = faceDiv.clientWidth;
-    var faceHeight = Math.round(faceWidth/0.5625);
-    if (Face.parameters.isHorizontal)
-      faceHeight = Math.round(faceWidth*0.5625);
+    var faceHeight = Math.round(faceWidth * 0.5625);
+    if (Face.parameters.isHorizontal === false) {
+      faceHeight = Math.round(faceWidth / 0.5625);
+    }
 
     faceDiv.style.height = faceHeight + "px";  
     faceDiv.style.backgroundColor = Face.parameters.backgroundColor;
@@ -248,35 +249,36 @@ function Face() {
   }
 
   Face.parameters = {
-    eyeOutlineThickness: 2,
-    eyeShapeRatio: 2.0,
+    eyeOutlineThickness: 4,
+    eyeShapeRatio: 1.2,
     hasReflection: true,
     hasInnerPupil: false,
     hasEyelid: true,
     hasBlinking: true,
     backgroundColor:"#E3B265",
-    eyeCenterDistPercent:25,
-    eyeYPercent:50,
+    eyeCenterDistPercent:20,
+    eyeYPercent:45,
     isLEDEyes:0,
     /* V1 style eyes*/
-    eyeOuterRadiusPercent:15,
-    eyeInnerRadiusPercent:5,
+    eyeOuterRadiusPercent:10,
+    eyeInnerRadiusPercent:40,
+    eyeOutlineColor:"#222222",
     eyeOuterColor:"#FFD",
     eyeInnerColor:"#000",
-    eyelidOffset: 10,
+    eyelidOffset: -10,
     backgroundColor:"#000",
     hasEyeLines:1,
-    eyeLineStrokeWidth:10,
+    eyeLineStrokeWidth:4,
     hasPupil:1,
-    eyePupilRadius: 10,
-    eyePupilRadiusPercent: 2,
+    eyePupilRadius: 6,
+    eyePupilRadiusPercent: 60,
     eyePupilColor: "#AAAAAA",
-    pupilXOffset: 1,
-    pupilYOffset: 1,
+    pupilXOffset: 0,
+    pupilYOffset: 0,
     /* V2 style eyes*/
-    eyeWPercent:30,
-    eyeHPercent:50,
-    betweenCircleDistancePercent:15,
+    eyeWPercent:20,
+    eyeHPercent:35,
+    betweenCircleDistancePercent:10,
     eyeBackgroundColor:"#222",
     eyeLEDOffColor:"#444",
     eyeLEDOnColor:"#86CCEE",
@@ -285,23 +287,23 @@ function Face() {
     text:"Hello, my name is EMAR",
     bubbleHeight: 50,
     bubbleColor: "#666666",
-    fontSize: 25,
+    fontSize: 20,
     fontColor: "#222222",
     avgBlinkTime: 9000,
     avgLookaroundTime: 4000,
     minLookaroundTime: 2000,
     /* Mouth */
     hasMouth: 1,
-    mouthWPercent: 10,
-    mouthYPercent: 80,
-    mouthH: 25,
+    mouthWPercent: 15,
+    mouthYPercent: 75,
+    mouthH: 14,
     mouthR: 5,
     mouthColor: "#222222",
-    mouthStrokeWidth: 10,
-    mouthSlope: 20,
+    mouthStrokeWidth: 6,
+    mouthSlope: 10,
     hasNose: 0,
     noseRPercent: 2,
-    noseYPercent: 65,
+    noseYPercent: 60,
     noseColor: "#222222",
   }
   

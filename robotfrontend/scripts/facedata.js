@@ -7,59 +7,115 @@ var hasNewParams = true;
 var isSetup = false;
 var robotFaces = null;
 
-// 默认脸参数（在数据库为空时使用），避免出现 undefined 写入错误
+// 默认脸参数（精简版 UI 使用），避免出现 undefined 写入错误
 function getDefaultFaceTemplate() {
   return {
     name: "Default face",
     thumb: "",
-    backgroundColor: { name: "Background color", type: "color", current: "#E3B265" },
-    eyeCenterDistPercent: { name: "Eye distance (%)", type: "number", current: 25, min: 0, max: 50 },
-    eyeYPercent: { name: "Eye height (%)", type: "number", current: 50, min: 0, max: 100 },
-    isLEDEyes: { name: "LED eyes", type: "boolean", current: 0 },
-    eyeOuterRadiusPercent: { name: "Outer radius (%)", type: "number", current: 15, min: 1, max: 50 },
-    eyeInnerRadiusPercent: { name: "Inner radius (%)", type: "number", current: 5, min: 1, max: 30 },
-    eyeOuterColor: { name: "Outer color", type: "color", current: "#FFD" },
-    eyeInnerColor: { name: "Inner color", type: "color", current: "#000" },
-    eyelidOffset: { name: "Eyelid offset", type: "number", current: 10, min: 0, max: 50 },
-    hasEyeLines: { name: "Eye lines", type: "boolean", current: 1 },
-    eyeLineStrokeWidth: { name: "Eye line stroke", type: "number", current: 10, min: 1, max: 30 },
-    hasPupil: { name: "Has pupil", type: "boolean", current: 1 },
-    eyePupilRadius: { name: "Pupil radius", type: "number", current: 10, min: 1, max: 30 },
-    eyePupilRadiusPercent: { name: "Pupil radius (%)", type: "number", current: 2, min: 0, max: 20 },
+    // 颜色
+    backgroundColor: { name: "Background color", type: "color", current: "#000000" },
+    eyeOuterColor: { name: "Outer eye color", type: "color", current: "#FFFFDD" },
+    eyeInnerColor: { name: "Inner eye color", type: "color", current: "#000000" },
+    eyeOutlineColor: { name: "Eye outline color", type: "color", current: "#222222" },
     eyePupilColor: { name: "Pupil color", type: "color", current: "#AAAAAA" },
-    pupilXOffset: { name: "Pupil X offset", type: "number", current: 1, min: -20, max: 20 },
-    pupilYOffset: { name: "Pupil Y offset", type: "number", current: 1, min: -20, max: 20 },
-    eyeWPercent: { name: "LED width (%)", type: "number", current: 30, min: 0, max: 100 },
-    eyeHPercent: { name: "LED height (%)", type: "number", current: 50, min: 0, max: 100 },
-    betweenCircleDistancePercent: { name: "LED gap (%)", type: "number", current: 15, min: 0, max: 100 },
-    eyeBackgroundColor: { name: "LED background", type: "color", current: "#222222" },
+    mouthColor: { name: "Mouth color", type: "color", current: "#222222" },
+    bubbleColor: { name: "Bubble color", type: "color", current: "#666666" },
+    fontColor: { name: "Font color", type: "color", current: "#222222" },
+    noseColor: { name: "Nose color", type: "color", current: "#222222" },
+    eyeBackgroundColor: { name: "Eye background color", type: "color", current: "#222222" },
     eyeLEDOffColor: { name: "LED off color", type: "color", current: "#444444" },
     eyeLEDOnColor: { name: "LED on color", type: "color", current: "#86CCEE" },
+    // 眼睛
+    eyeCenterDistPercent: { name: "Distance between eyes", type: "number", current: 20, min: 0, max: 40 },
+    eyeInnerRadiusPercent: { name: "Inner eye size", type: "number", current: 40, min: 0, max: 140 },
+    eyeLineStrokeWidth: { name: "Thickness of eye lines", type: "number", current: 4, min: 0, max: 20 },
+    eyeOuterRadiusPercent: { name: "Outer eye size", type: "number", current: 10, min: 5, max: 25 },
+    eyeOutlineThickness: { name: "Eye outline thickness", type: "number", current: 4, min: 1, max: 20 },
+    eyePupilRadiusPercent: { name: "Pupil size", type: "number", current: 60, min: 0, max: 100 },
+    eyeShapeRatio: { name: "Eye shape ratio", type: "number", current: 1.2, min: 0.87, max: 1.5 },
+    eyeYPercent: { name: "Vertical eye position", type: "number", current: 45, min: 20, max: 80 },
+    eyelidOffset: { name: "Eyelid offset", type: "number", current: -10, min: -40, max: 20 },
+    pupilXOffset: { name: "Pupil X offset", type: "number", current: 0, min: -50, max: 50 },
+    pupilYOffset: { name: "Pupil Y offset", type: "number", current: 0, min: -50, max: 50 },
+    eyeWPercent: { name: "LED eye width", type: "number", current: 20, min: 5, max: 50 },
+    eyeHPercent: { name: "LED eye height", type: "number", current: 35, min: 5, max: 80 },
+    betweenCircleDistancePercent: { name: "Distance between LEDs", type: "number", current: 10, min: 0, max: 30 },
     nCircles: { name: "LED circles", type: "number", current: 9, min: 1, max: 20 },
+    // 嘴巴
+    mouthH: { name: "Mouth height", type: "number", current: 14, min: -5, max: 60 },
+    mouthSlope: { name: "Mouth slope", type: "number", current: 10, min: -5, max: 50 },
+    mouthStrokeWidth: { name: "Mouth thickness", type: "number", current: 6, min: 1, max: 20 },
+    mouthWPercent: { name: "Mouth width", type: "number", current: 15, min: 0, max: 40 },
+    mouthYPercent: { name: "Vertical mouth position", type: "number", current: 75, min: 60, max: 90 },
+    mouthR: { name: "Mouth curvature", type: "number", current: 5, min: 0, max: 20 },
+    // 声音
+    voicePitch: { name: "Voice pitch", type: "number", current: 0.6, min: 0, max: 1 },
+    voiceRate: { name: "Voice rate", type: "number", current: 5, min: 0.1, max: 10 },
+    voiceVolume: { name: "Voice volume", type: "number", current: 1, min: 0, max: 1 },
+    // 文字气泡
+    bubbleHeight: { name: "Bubble height", type: "number", current: 50, min: 0, max: 100 },
+    fontSize: { name: "Font size", type: "number", current: 20, min: 8, max: 72 },
+    // 时间参数
+    avgBlinkTime: { name: "Average blink time", type: "number", current: 9000, min: 0, max: 20000 },
+    avgLookaroundTime: { name: "Average lookaround time", type: "number", current: 4000, min: 0, max: 20000 },
+    minLookaroundTime: { name: "Minimum lookaround time", type: "number", current: 2000, min: 0, max: 20000 },
+    // 开关
+    hasBlinking: { name: "Has blinking", type: "boolean", current: 1 },
+    hasEyelid: { name: "Has eyelid", type: "boolean", current: 1 },
+    hasPupil: { name: "Pupil", type: "boolean", current: 1 },
+    hasEyeLines: { name: "Eye lines", type: "boolean", current: 1 },
+    hasMouth: { name: "Mouth", type: "boolean", current: 1 },
     hasReflection: { name: "Reflection", type: "boolean", current: 1 },
     hasInnerPupil: { name: "Inner pupil", type: "boolean", current: 0 },
-    hasText: { name: "Speech bubble", type: "boolean", current: 0 },
-    text: { name: "Bubble text", type: "text", current: "Hello, my name is EMAR" },
-    bubbleHeight: { name: "Bubble height", type: "number", current: 50, min: 0, max: 200 },
-    bubbleColor: { name: "Bubble color", type: "color", current: "#666666" },
-    fontSize: { name: "Font size", type: "number", current: 25, min: 8, max: 72 },
-    fontColor: { name: "Font color", type: "color", current: "#222222" },
-    avgBlinkTime: { name: "Avg blink (ms)", type: "number", current: 9000, min: 1000, max: 20000 },
-    avgLookaroundTime: { name: "Avg lookaround (ms)", type: "number", current: 4000, min: 500, max: 15000 },
-    minLookaroundTime: { name: "Min lookaround (ms)", type: "number", current: 2000, min: 0, max: 15000 },
-    hasMouth: { name: "Has mouth", type: "boolean", current: 1 },
-    mouthWPercent: { name: "Mouth width (%)", type: "number", current: 10, min: 0, max: 100 },
-    mouthYPercent: { name: "Mouth Y (%)", type: "number", current: 80, min: 0, max: 100 },
-    mouthH: { name: "Mouth height", type: "number", current: 25, min: 0, max: 100 },
-    mouthR: { name: "Mouth radius", type: "number", current: 5, min: 0, max: 50 },
-    mouthColor: { name: "Mouth color", type: "color", current: "#222222" },
-    mouthStrokeWidth: { name: "Mouth stroke", type: "number", current: 10, min: 0, max: 50 },
-    mouthSlope: { name: "Mouth slope", type: "number", current: 20, min: -50, max: 50 },
+    hasText: { name: "Has text", type: "boolean", current: 0 },
     hasNose: { name: "Has nose", type: "boolean", current: 0 },
-    noseRPercent: { name: "Nose radius (%)", type: "number", current: 2, min: 0, max: 20 },
-    noseYPercent: { name: "Nose Y (%)", type: "number", current: 65, min: 0, max: 100 },
-    noseColor: { name: "Nose color", type: "color", current: "#222222" },
+    isHorizontal: { name: "Horizontal", type: "boolean", current: 1 },
+    isLEDEyes: { name: "LED eyes", type: "boolean", current: 0 },
   };
+}
+
+// 将传入的脸参数裁剪到模板定义的字段与范围
+function normalizeFace(face) {
+  var tpl = getDefaultFaceTemplate();
+  var normalized = { name: (face && face.name) || tpl.name, thumb: (face && face.thumb) || "" };
+  var keys = new Set(Object.keys(tpl).concat(Object.keys(face || {})));
+
+  keys.forEach(function(key) {
+    if (key === "name" || key === "thumb") return;
+    var paramTpl = tpl[key];
+    var src = face && face[key];
+    var base = paramTpl || src;
+    if (!base) return;
+
+    var type = base.type || (src && src.type) || (paramTpl && paramTpl.type) || "number";
+    var current = (src && typeof src.current !== "undefined") ? src.current : (paramTpl && paramTpl.current);
+
+    if (type === "number") {
+      current = Number(current);
+      if (isNaN(current) && paramTpl) current = paramTpl.current;
+      if (typeof base.min !== "undefined") current = Math.max(base.min, current);
+      if (typeof base.max !== "undefined") current = Math.min(base.max, current);
+    } else if (type === "boolean") {
+      current = current ? 1 : 0;
+    } else if (typeof current === "undefined" && paramTpl) {
+      current = paramTpl.current;
+    }
+
+    normalized[key] = Object.assign(
+      { name: base.name || key, type: type },
+      base,
+      { current: current }
+    );
+  });
+  return normalized;
+}
+
+function normalizeFacesArray(faces) {
+  var tplFace = getDefaultFaceTemplate();
+  if (!Array.isArray(faces)) return [tplFace];
+  var cleaned = faces.filter(Boolean).map(normalizeFace);
+  if (cleaned.length === 0) cleaned.push(tplFace);
+  return cleaned;
 }
 
 /* Function that needs to be called whenever the face preview needs to be renewed */
@@ -126,27 +182,20 @@ function updateAllUsersFaceList(snapshot) {
 
     allUserData = snapshot.val() || {};
 
-    // 清理掉数组中可能存在的 null/undefined，避免写入错误
+    // 规范化每个用户的脸参数，只保留精简模板字段
     Object.keys(allUserData).forEach(function(uid) {
-      var faces = (allUserData[uid] || {}).faces;
-      if (Array.isArray(faces)) {
-        var cleaned = faces.filter(Boolean);
-        if (cleaned.length !== faces.length) {
-          allUserData[uid].faces = cleaned;
-          firebase.database().ref('/users/' + uid + '/faces').set(cleaned);
-        }
-      }
+      var userData = allUserData[uid] || {};
+      userData.faces = normalizeFacesArray(userData.faces);
+      allUserData[uid] = userData;
+      firebase.database().ref('/users/' + uid + '/faces').set(userData.faces);
     });
 
-    // 如果当前用户还没有任何脸，写入一个默认脸，避免 undefined 写入错误
+    // 当前用户如果不存在记录，创建默认脸
     if (Database.uid) {
-      var current = allUserData[Database.uid] || {};
-      var faces = Array.isArray(current.faces) ? current.faces : [];
-      if (faces.length === 0) {
-        faces = [getDefaultFaceTemplate()];
-        firebase.database().ref('/users/' + Database.uid).update({ faces: faces });
-        current.faces = faces;
-        allUserData[Database.uid] = current;
+      if (!allUserData[Database.uid]) allUserData[Database.uid] = {};
+      if (!Array.isArray(allUserData[Database.uid].faces) || allUserData[Database.uid].faces.length === 0) {
+        allUserData[Database.uid].faces = normalizeFacesArray([]);
+        firebase.database().ref('/users/' + Database.uid + '/faces').set(allUserData[Database.uid].faces);
       }
     }
 
@@ -205,7 +254,9 @@ function updateAllUsersFaceList(snapshot) {
     }
 
     var allFaceImgs = document.getElementsByClassName("face-thumb");
-    selectedFaceChanged(allFaceImgs[0], selectedUser, 0);
+    if (allFaceImgs && allFaceImgs.length > 0) {
+      selectedFaceChanged(allFaceImgs[0], selectedUser, 0);
+    }
   }
 }
 
@@ -216,6 +267,7 @@ function updateRobotFaceList(snapshot) {
     robotFaceList.innerHTML = "";
 
   robotFaces = snapshot?.val ? snapshot.val() : snapshot;
+  if (!Array.isArray(robotFaces)) robotFaces = [];
 
   if (robotFaces != undefined) {
     
@@ -380,6 +432,6 @@ function createNewFace() {
   }
   var dir = 'users/' + (Database.uid);
   var dbRef = firebase.database().ref(dir + '/faces/' + newFaceIndex + '/');
-  var faceToSave = newParameters || getDefaultFaceTemplate();
+  var faceToSave = normalizeFace(newParameters || getDefaultFaceTemplate());
   dbRef.set(faceToSave);
 }

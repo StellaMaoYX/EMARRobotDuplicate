@@ -15,7 +15,9 @@ function initializeEdit() {
 }
 
 function currentUserDataChanged(snapshot) {
-  currentUserData = snapshot.val();
+  var data = snapshot.val() || {};
+  data.faces = normalizeFacesArray(data.faces);
+  currentUserData = data;
   updateUserFaceList();
   updateFace();
   updateFaceEditor();

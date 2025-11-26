@@ -606,3 +606,80 @@ function Robot(robotId, apiDiv) {
   
   // TODO: Add other actions
 }
+
+/*
+ * RobotAPI wrapper: keeps a Robot instance plus the custom API/state data in sync
+ * and exposes helpers that control.js expects (onRobotStatusChanged, getRobotOptions, etc.).
+ */
+function RobotAPI(firebaseRef, firebaseApiKey, config, robotId, customApiOverride) {
+  var self = this;
+  self.currentRobot = robotId;
+  self.robot = new Robot(robotId);
+  // Expose current robot id on the instance for existing code that reads it.
+  self.robot.currentRobot = robotId;
+  Robot.currentRobot = robotId;
+
+  self.actions = { presetSpeak: [], sounds: [] };
+  self.inputs = {};
+  self.states = { faces: [], screens: [], motors: [], poses: [] };
+  self.options = {};
+
+  // Start Robot listeners so internal lists (faces/screens/etc.) stay fresh.
+  Robot.initialize();
+
+  // Custom API (faces/screens/motors/sounds) listener
+  var apiRef = firebase.database().ref('/robots/' + robotId + '/customAPI/');
+  apiRef.on('value', function (snapshot) {
+    var apiData = snapshot && snapshot.val ? snapshot.val() : snapshot;
+    apiData = apiData || {};
+
+    self.actions = apiData.actions || self.actions;
+    self.inputs = apiData.inputs || self.inputs;
+    self.states = apiData.states || self.states;
+    self.options = apiData.options || self.options;
+
+    // Optional override/extension (rarely used; keeps backward compatibility)
+    if (customApiOverride) {
+      if (customApiOverride.actions) self.actions = Object.assign({}, self.actions, customApiOverride.actions);
+      if (customApiOverride.inputs) self.inputs = Object.assign({}, self.inputs, customApiOverride.inputs);
+      if (customApiOverride.states) self.states = Object.assign({}, self.states, customApiOverride.states);
+    }
+
+    // Keep Robot.* in sync so Robot methods (setFace, playSound, etc.) work.
+    Robot.faces = self.states.faces || [];
+    Robot.bellyScreens = (self.inputs && self.inputs.bellyScreens) || [];
+    Robot.sounds = (self.actions && self.actions.sounds) || [];
+    Robot.poses = self.states.poses || [];
+    Robot.poseState = self.states.poses || [];
+  });
+
+  // Robot state listener (e.g., current face/screen/motors)
+  var stateRef = firebase.database().ref('/robots/' + robotId + '/state/');
+  self._stateListeners = [];
+  self._customListeners = [];
+  stateRef.on('value', function (snapshot) {
+    var robotState = snapshot && snapshot.val ? snapshot.val() : snapshot;
+    robotState = robotState || {};
+    self._stateListeners.forEach(function (cb) { cb(robotState); });
+    self._customListeners.forEach(function (cb) { cb(robotState); });
+  });
+
+  self.onRobotStatusChanged = function (callback) {
+    if (typeof callback === 'function') self._stateListeners.push(callback);
+  };
+
+  // Identical to onRobotStatusChanged, kept for API compatibility with control.js
+  self.onRobotStatusChangedCustom = function (callback) {
+    if (typeof callback === 'function') self._customListeners.push(callback);
+  };
+
+  self.getRobotOptions = function () {
+    // Provide a lightweight options object for logging/analytics.
+    return Object.assign({}, self.options, {
+      robotId: robotId,
+      firebaseRef: firebaseRef,
+      firebaseApiKey: firebaseApiKey,
+      projectId: config && config.projectId,
+    });
+  };
+}

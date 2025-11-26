@@ -1,5 +1,7 @@
 var config = new Config();
 var db = new Database(config.config, initializeSetup);
+// Ensure Face static methods are initialized for previews/rendering.
+var face = new Face();
 var currentRobot = 0;
 var utterances = null;
 var bellyScreens;

@@ -1,6 +1,10 @@
 var robot = null;
 var customAPI = null;
 var robotAPI = null;
+// Optional override for custom API structure; may be undefined on some deployments.
+var CustomAPIOverride = (typeof CustomAPI !== 'undefined') ? CustomAPI : null;
+// Ensure Face static methods are initialized for preview/rendering.
+var face = new Face();
 
 var faceState = null;
 var screenState = null;
@@ -47,7 +51,7 @@ function initializeControl(snapshot, config, robotid) {
 
   // Get robot API for requested robot
   robotAPI = new RobotAPI(firebaseRef, firebaseApiKey, config, robotId);
-  customAPI = new RobotAPI(firebaseRef, firebaseApiKey, config, robotId, CustomAPI);
+  customAPI = new RobotAPI(firebaseRef, firebaseApiKey, config, robotId, CustomAPIOverride);
 
   robot = robotAPI.robot;
   console.log('currentRobot: ' + robot.currentRobot);
@@ -72,7 +76,7 @@ function initializeControl(snapshot, config, robotid) {
   var faceIndex = 0;
 
   // Using BigQuery - log the parameters for the session start of the block
-  if (CustomAPI != null && CustomAPI != undefined && Config.bigQueryURL != null) {
+  if (CustomAPIOverride && Config.bigQueryURL != null) {
     var options = customAPI.getRobotOptions();
     options['eventType'] = 'sessionStart';
     options['robotId'] = robot.currentRobot;
@@ -126,8 +130,21 @@ function updateRobotState(snapshot) {
     // FACE
     Face.updateRobotFace(snapshot);
 
-    var faceIndex = robotState.currentFace;
     var faceList = customAPI.states.faces;
+    if (!Array.isArray(faceList) || faceList.length === 0) {
+      var faceDiv = document.getElementById('faceControls');
+      if (faceDiv) {
+        faceDiv.innerHTML =
+          "<p class='text-danger mb-0'>No faces configured. Use the Robot Setup tool to add faces.</p>";
+      }
+      return;
+    }
+
+    var faceIndex =
+      robotState && typeof robotState.currentFace === 'number'
+        ? robotState.currentFace
+        : 0;
+    if (faceIndex < 0 || faceIndex >= faceList.length) faceIndex = 0;
 
     // EYES
     var div = document.getElementById('faceControls');
@@ -144,8 +161,8 @@ function updateRobotState(snapshot) {
       function () {
         return ' face.';
       },
-      function (robotState) {
-        return faceList[robotState.currentFace].name;
+      function () {
+        return faceList[faceIndex].name;
       },
       robot.setFace.bind(robot),
       'currentFace'
@@ -154,8 +171,12 @@ function updateRobotState(snapshot) {
     // SCREEN
     var div = document.getElementById('screenControls');
     div.innerHTML = '';
-    var screenList = customAPI.states.screens;
-    var screenIndex = robotState.currentScreen;
+    var screenList = customAPI.states.screens || [];
+    var screenIndex =
+      robotState && typeof robotState.currentScreen === 'number'
+        ? robotState.currentScreen
+        : 0;
+    if (screenIndex < 0 || screenIndex >= screenList.length) screenIndex = 0;
     createStateChangeInterface(
       'screenControls',
       snapshot,
@@ -168,15 +189,15 @@ function updateRobotState(snapshot) {
       function () {
         return '.';
       },
-      function (robotState) {
-        return screenList[robotState.currentScreen].name;
+      function () {
+        return screenList[screenIndex] ? screenList[screenIndex].name : '';
       },
       robot.setScreen.bind(robot),
       'currentScreen'
     );
 
     // POSES
-    var poseList = customAPI.states.poses;
+    var poseList = customAPI.states.poses || [];
     var div = document.getElementById('poseControls');
     div.innerHTML = '';
     poseList.forEach((elem, index) => {
