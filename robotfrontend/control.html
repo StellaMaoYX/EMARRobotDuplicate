@@ -175,23 +175,40 @@
 <script>
   // Initialize Firebase once using the unified Config, then start the controller UI.
   (function startControlPage() {
-    var config = new Config();
-    var db = new Database(config.config, function () {
-      var robotParam = Config.getURLParameter('robot');
-      var robotId = robotParam != null ? Number(robotParam) : 0;
-      firebase
-        .database()
-        .ref('/robots/' + robotId + '/state/')
-        .once('value')
-        .then(function (snapshot) {
-          var initialState = snapshot && snapshot.val ? snapshot.val() : snapshot;
-          initializeControl(initialState || {}, config.config, robotId);
-        })
-        .catch(function (err) {
-          console.error('Failed to load initial robot state', err);
-          initializeControl({}, config.config, robotId);
-        });
-    });
+    var start = function () {
+      var config = new Config();
+      var db = new Database(config.config, function () {
+        var robotParam = Config.getURLParameter('robot');
+        var robotId = robotParam != null ? Number(robotParam) : 0;
+        firebase
+          .database()
+          .ref('/robots/' + robotId + '/state/')
+          .once('value')
+          .then(function (snapshot) {
+            var initialState = snapshot && snapshot.val ? snapshot.val() : snapshot;
+            initializeControl(initialState || {}, config.config, robotId);
+          })
+          .catch(function (err) {
+            console.error('Failed to load initial robot state', err);
+            initializeControl({}, config.config, robotId);
+          });
+      });
+    };
+
+    // If RobotAPI failed to load (caching/404), try to inject it before starting.
+    if (typeof RobotAPI === 'undefined') {
+      console.warn('RobotAPI not found, attempting to reload script.');
+      var script = document.createElement('script');
+      script.src = '../robotapijs/scripts/robotapi.js';
+      script.onload = start;
+      script.onerror = function () {
+        console.error('Unable to load RobotAPI script.');
+        start();
+      };
+      document.head.appendChild(script);
+    } else {
+      start();
+    }
   })();
 </script>
 </body>

@@ -1,6 +1,8 @@
 var robot = null;
 var customAPI = null;
 var robotAPI = null;
+var face = new Face();
+var CustomAPI = window.CustomAPI || null;
 
 var faceState = null;
 var screenState = null;
@@ -48,6 +50,16 @@ function initializeControl(snapshot, config, robotid) {
   // Get robot API for requested robot
   robotAPI = new RobotAPI(firebaseRef, firebaseApiKey, config, robotId);
   customAPI = new RobotAPI(firebaseRef, firebaseApiKey, config, robotId, CustomAPI);
+  customAPI.states = customAPI.states || { faces: [], screens: [], motors: [], poses: [] };
+  customAPI.inputs = customAPI.inputs || { bellyScreens: [] };
+  customAPI.actions = customAPI.actions || { presetSpeak: [] };
+  customAPI.actions.presetSpeak = customAPI.actions.presetSpeak || [];
+  if ((!customAPI.states.faces || customAPI.states.faces.length === 0) && typeof getDefaultFaceTemplate === 'function') {
+    customAPI.states.faces = [getDefaultFaceTemplate()];
+  }
+  if (customAPI.states.faces && customAPI.states.faces.length > 0) {
+    Face.faces = customAPI.states.faces;
+  }
 
   robot = robotAPI.robot;
   console.log('currentRobot: ' + robot.currentRobot);
@@ -55,11 +67,20 @@ function initializeControl(snapshot, config, robotid) {
   customAPI.onRobotStatusChanged(function (snapshot) {
     // console.log(snapshot.val());
     // var robotState = snapshot.val();
-    var robotState = snapshot;
-    var faceIndex = robotState.currentFace;
-    var faceList = customAPI.states.faces;
-    var faceParams = faceList[faceIndex].parameters;
-    Face.updateRobotFace(snapshot);
+    var robotState = snapshot || {};
+    var faceList = (customAPI.states && customAPI.states.faces) || [];
+    if (faceList.length === 0 && typeof getDefaultFaceTemplate === 'function') {
+      faceList = [getDefaultFaceTemplate()];
+      customAPI.states.faces = faceList;
+    }
+    if (faceList.length > 0) {
+      var faceIndex = robotState.currentFace;
+      if (faceIndex == null || faceIndex < 0 || faceIndex >= faceList.length) {
+        faceIndex = 0;
+      }
+      Face.faces = faceList;
+      Face.updateRobotFace(snapshot);
+    }
   });
 
   robotAPI.onRobotStatusChangedCustom(function (snapshot) {
@@ -120,78 +141,109 @@ function initializeControl(snapshot, config, robotid) {
 
 function updateRobotState(snapshot) {
   if (customAPI != null && robotAPI != null) {
-    // var robotState = snapshot.val();
-    var robotState = snapshot;
+    var robotState = snapshot || {};
 
-    // FACE
-    Face.updateRobotFace(snapshot);
-
+    var apiStates = customAPI.states || {};
     var faceIndex = robotState.currentFace;
-    var faceList = customAPI.states.faces;
+    var faceList = apiStates.faces || [];
+    if (faceList.length === 0 && typeof getDefaultFaceTemplate === 'function') {
+      faceList = [getDefaultFaceTemplate()];
+      apiStates.faces = faceList;
+      customAPI.states = apiStates;
+    }
+    if (faceList.length > 0) {
+      Face.faces = faceList;
+    }
+
+    var screenList = apiStates.screens || (customAPI.inputs && customAPI.inputs.bellyScreens) || [];
+    if (screenList.length === 0 && customAPI.inputs && customAPI.inputs.bellyScreens && customAPI.inputs.bellyScreens.length > 0) {
+      screenList = customAPI.inputs.bellyScreens;
+    }
+    Belly.bellyScreens = screenList.length > 0 ? screenList : [];
+
+    if (Face && typeof Face.updateRobotFace === 'function') {
+      if (robotState.currentFace == null && faceList.length > 0) {
+        robotState.currentFace = 0;
+      }
+      Face.updateRobotFace(snapshot);
+    }
 
     // EYES
     var div = document.getElementById('faceControls');
     div.innerHTML = '';
-    createStateChangeInterface(
-      'faceControls',
-      snapshot,
-      faceList,
-      faceIndex,
-      'Set robot eyes',
-      function () {
-        return 'Robot is looking at a ';
-      },
-      function () {
-        return ' face.';
-      },
-      function (robotState) {
-        return faceList[robotState.currentFace].name;
-      },
-      robot.setFace.bind(robot),
-      'currentFace'
-    );
+    if (faceList.length > 0) {
+      createStateChangeInterface(
+        'faceControls',
+        snapshot,
+        faceList,
+        faceIndex,
+        'Set robot eyes',
+        function () {
+          return 'Robot is looking at a ';
+        },
+        function () {
+          return ' face.';
+        },
+        function (robotState) {
+          var idx = robotState.currentFace;
+          return faceList[idx] ? faceList[idx].name : '';
+        },
+        robot.setFace.bind(robot),
+        'currentFace'
+      );
+    } else {
+      div.innerHTML = '<p class="text-muted">No faces available. Use Robot Setup to add faces.</p>';
+    }
 
     // SCREEN
     var div = document.getElementById('screenControls');
     div.innerHTML = '';
-    var screenList = customAPI.states.screens;
     var screenIndex = robotState.currentScreen;
-    createStateChangeInterface(
-      'screenControls',
-      snapshot,
-      screenList,
-      screenIndex,
-      'Set robot screen',
-      function () {
-        return 'Robot screen will show ';
-      },
-      function () {
-        return '.';
-      },
-      function (robotState) {
-        return screenList[robotState.currentScreen].name;
-      },
-      robot.setScreen.bind(robot),
-      'currentScreen'
-    );
+    if (screenList.length > 0) {
+      createStateChangeInterface(
+        'screenControls',
+        snapshot,
+        screenList,
+        screenIndex,
+        'Set robot screen',
+        function () {
+          return 'Robot screen will show ';
+        },
+        function () {
+          return '.';
+        },
+        function (robotState) {
+          var idx = robotState.currentScreen;
+          return screenList[idx] ? screenList[idx].name : '';
+        },
+        robot.setScreen.bind(robot),
+        'currentScreen'
+      );
+    } else {
+      div.innerHTML = '<p class="text-muted">No screens available. Use Belly Editor to add screens.</p>';
+    }
 
     // POSES
-    var poseList = customAPI.states.poses;
+    var poseList = apiStates.poses || [];
     var div = document.getElementById('poseControls');
     div.innerHTML = '';
-    poseList.forEach((elem, index) => {
-      if (elem != null) {
-        div.innerHTML +=
-          `<div class="btn-group" role="group" style="padding-bottom:4pt">` +
-          `<button type="button" class="btn btn-info" onclick="poseChanged(` +
-          index +
-          `, '` +
-          elem.name +
-          `')">` +
-          elem.name +
-          `</button></div>`;
-      }
-    });
+    if (poseList.length > 0) {
+      poseList.forEach((elem, index) => {
+        if (elem != null) {
+          div.innerHTML +=
+            `<div class="btn-group" role="group" style="padding-bottom:4pt">` +
+            `<button type="button" class="btn btn-info" onclick="poseChanged(` +
+            index +
+            `, '` +
+            elem.name +
+            `')">` +
+            elem.name +
+            `</button></div>`;
+        }
+      });
+    } else {
+      div.innerHTML = '<p class="text-muted">No poses available.</p>';
+    }
 
     // Set multiple motors at once (pose editor/sliders)
     var poseControlDiv = document.getElementById('motorPoseControls');
@@ -201,9 +253,9 @@ function updateRobotState(snapshot) {
     var labelDiv = document.getElementById('poseMotorLabels');
     var inputDiv = document.getElementById('poseMotorInputs');
 
-    motorState = normalizeMotors(customAPI.states.motors);
+    motorState = normalizeMotors(apiStates.motors);
 
-    if (motorState) {
+    if (motorState && motorState.length > 0) {
       motorState.forEach((elem, index) => {
         var motorValue = 'value=' + (elem && elem.value ? parseInt(elem.value) : 0);
         var motorName = elem && elem.name ? elem.name : 'Motor ' + index;
@@ -223,6 +275,8 @@ function updateRobotState(snapshot) {
           motorValue +
           ` oninput="manualPoseChanged()"></div>`;
       });
+    } else {
+      labelDiv.innerHTML = '<p class="text-muted">No motor controls available.</p>';
     }
 
     // Individual motors
@@ -271,6 +325,8 @@ function updateRobotState(snapshot) {
           motorMax +
           `})">>></button></div>`;
       });
+    } else {
+      labelDiv.innerHTML = '<p class="text-muted">No motors in state.</p>';
     }
 
     // Head touch indicator

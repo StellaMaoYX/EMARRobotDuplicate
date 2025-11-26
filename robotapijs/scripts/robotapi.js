@@ -606,3 +606,82 @@ function Robot(robotId, apiDiv) {
   
   // TODO: Add other actions
 }
+
+/*
+ * Lightweight wrapper used by the controller UI. It keeps a local copy of
+ * robot states/actions and exposes helper callbacks that mirror the old
+ * RobotAPI interface expected by control.js.
+ */
+function RobotAPI(firebaseRef, firebaseApiKey, config, robotId, CustomAPI) {
+  var self = this;
+  self.robotId = typeof robotId === 'number' ? robotId : 0;
+  self.states = { faces: [], screens: [], motors: [], poses: [] };
+  self.inputs = { bellyScreens: [] };
+  self.actions = { presetSpeak: [] };
+  self.customAPI = null;
+  self.robot = new Robot(self.robotId);
+  self.robot.currentRobot = self.robotId;
+
+  // Make sure Face helpers exist before the controller starts drawing.
+  if (typeof Face === 'function' && typeof Face.updateRobotFace !== 'function') {
+    new Face();
+  }
+
+  var db = firebase.database();
+
+  function normalizeSnapshot(snapshot) {
+    return snapshot && typeof snapshot.val === 'function' ? snapshot.val() : snapshot;
+  }
+
+  function updateLocalAPI(data) {
+    if (!data) return;
+    self.states = data.states || self.states;
+    self.inputs = data.inputs || self.inputs;
+    self.actions = data.actions || self.actions;
+
+    // Keep visual helpers in sync so previews render with the latest assets.
+    if (typeof Face !== 'undefined' && self.states.faces) {
+      Face.faces = self.states.faces;
+    }
+    if (typeof Belly !== 'undefined' && self.inputs.bellyScreens) {
+      Belly.bellyScreens = self.inputs.bellyScreens;
+    }
+  }
+
+  // Listen for API (faces/screens/actions) changes.
+  db.ref('/robots/' + self.robotId + '/customAPI/').on('value', function (snapshot) {
+    updateLocalAPI(normalizeSnapshot(snapshot));
+  });
+
+  // Public callbacks used by the controller.
+  self.onRobotStatusChanged = function (cb) {
+    db.ref('/robots/' + self.robotId + '/state/').on('value', function (snapshot) {
+      cb(normalizeSnapshot(snapshot));
+    });
+  };
+
+  // Alias kept for backwards compatibility.
+  self.onRobotStatusChangedCustom = function (cb) {
+    self.onRobotStatusChanged(cb);
+  };
+
+  self.getRobotOptions = function () {
+    return {
+      robotId: self.robotId,
+      states: self.states,
+      inputs: self.inputs,
+      actions: self.actions,
+    };
+  };
+
+  // Ensure Robot listeners are wired up for motor/pose updates.
+  if (typeof Robot.setRobotId === 'function') {
+    Robot.setRobotId(self.robotId);
+  }
+}
+
+// Expose globally so inline scripts can access when bundlers/minifiers are absent.
+if (typeof window !== 'undefined') {
+  window.Robot = window.Robot || Robot;
+  window.RobotAPI = window.RobotAPI || RobotAPI;
+}
