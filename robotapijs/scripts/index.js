@@ -1,10 +1,10 @@
 var config = {
-    apiKey: "AIzaSyAisnI9BEW_Uc0-z1ad25nB6eNXEEQ_xQQ",
-    authDomain: "emar-database.firebaseapp.com",
-    databaseURL: "https://emar-database.firebaseio.com",
-    projectId: "emar-database",
-    storageBucket: "emar-database.appspot.com",
-    messagingSenderId: "672114317207"
+    apiKey: "AIzaSyB10dHhQqD1TMXTJfQNLmFkrJtVyQ4JTuA",
+    authDomain: "flexi-f7d77.firebaseapp.com",
+    databaseURL: "https://flexi-f7d77-default-rtdb.firebaseio.com",
+    projectId: "flexi-f7d77",
+    storageBucket: "flexi-f7d77.appspot.com",
+    messagingSenderId: "441373455093"
 };
 
 var robot = new Robot(0);

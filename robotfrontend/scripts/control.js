@@ -1,312 +1,115 @@
+var config = new Config();
+var db = new Database(config.config, initializeControl);
 var robot = null;
-var customAPI = null;
+var currentRobot = 0;
+var face;
+var belly;
 var robotAPI = null;
-var face = new Face();
-var CustomAPI = window.CustomAPI || null;
-
-var faceState = null;
-var screenState = null;
-var poseState = null;
+var customAPI = null;
 var motorState = null;
+var animations = [];
+var currAnimation = [];
+var isTouched = false;
 
-// Normalize motor data so it always behaves like an array.
-// Supports both the original array format and a simple object map format.
-function normalizeMotors(motors) {
-  if (!motors) {
-    return [];
+
+function initializeControl() {
+  var robotParam = Config.getURLParameter('robot');
+  if (robotParam != null) currentRobot = Number(robotParam);
+  console.log('currentRobot: ' + currentRobot);
+
+  robot = new Robot(currentRobot);
+  Robot.initialize();
+  face = new Face();
+  belly = new Belly(currentRobot, 'small');
+
+  /* Register all database callbacks */
+
+  var dbAllSoundsRef = firebase.database().ref('/robotapi/');
+  dbAllSoundsRef.on('value', updateRobotAPI);
+
+  var dbRobotRef = firebase.database().ref('/robots/' + currentRobot);
+  dbRobotRef.on('value', updateHandler);
+  dbRobotRef.once('value', updateHeader);
+
+  // var dbRobotRef = firebase
+  //   .database()
+  //   .ref('/robots/' + currentRobot + '/customAPI/');
+  // dbRobotRef.on('value', updateCustomRobotAPI);
+
+  // var dbRobotRef = firebase
+  //   .database()
+  //   .ref('/robots/' + currentRobot + '/customAPI/states/faces/');
+  // dbRobotRef.on('value', updateRobotFaceList);
+
+  // var dbRobotStateRef = firebase
+  //   .database()
+  //   .ref('/robots/' + currentRobot + '/state/');
+  // dbRobotStateRef.on('value', updateRobotState);
+
+  window.onbeforeunload = confirmExit;
+  function confirmExit() {
+    // dbRobotStateRef.off();
+    dbRobotRef.off();
   }
-  // If it's already an array, just return it.
-  if (Array.isArray(motors)) {
-    return motors;
-  }
-  // If it's an object (e.g. {neckPan: {...}, neckTilt: {...}}),
-  // convert it into an array of {name, min, max, value} objects.
-  var result = [];
-  Object.keys(motors).forEach(function (key) {
-    var m = motors[key] || {};
-    result.push({
-      name: m.name || key,
-      min: m.min,
-      max: m.max,
-      value: m.value || 0,
-    });
-  });
-  return result;
 }
 
-function initializeControl(snapshot, config, robotid) {
-  console.log('Logging event: ----------');
-  console.log('sessionStarted: ' + new Date());
-
-  if (config == null || config == undefined) {
-    config = {};
+function updateHeader(snapshot) {
+  var robotData = snapshot.val();
+  if (robotData.name) {
+    var headerElmt = document.getElementById('controlTitle');
+    headerElmt.innerText += ': ' + robotData.name;
   }
-
-  var firebaseRef = Config.databaseURL;
-  // var firebaseRef = 'https://emar-database.firebaseio.com/';
-  var firebaseApiKey = Config.apiKey;
-  var robotId = robotid;
-
-  // Get robot API for requested robot
-  robotAPI = new RobotAPI(firebaseRef, firebaseApiKey, config, robotId);
-  customAPI = new RobotAPI(firebaseRef, firebaseApiKey, config, robotId, CustomAPI);
-  customAPI.states = customAPI.states || { faces: [], screens: [], motors: [], poses: [] };
-  customAPI.inputs = customAPI.inputs || { bellyScreens: [] };
-  customAPI.actions = customAPI.actions || { presetSpeak: [] };
-  customAPI.actions.presetSpeak = customAPI.actions.presetSpeak || [];
-  if ((!customAPI.states.faces || customAPI.states.faces.length === 0) && typeof getDefaultFaceTemplate === 'function') {
-    customAPI.states.faces = [getDefaultFaceTemplate()];
-  }
-  if (customAPI.states.faces && customAPI.states.faces.length > 0) {
-    Face.faces = customAPI.states.faces;
-  }
-
-  robot = robotAPI.robot;
-  console.log('currentRobot: ' + robot.currentRobot);
-
-  customAPI.onRobotStatusChanged(function (snapshot) {
-    // console.log(snapshot.val());
-    // var robotState = snapshot.val();
-    var robotState = snapshot || {};
-    var faceList = (customAPI.states && customAPI.states.faces) || [];
-    if (faceList.length === 0 && typeof getDefaultFaceTemplate === 'function') {
-      faceList = [getDefaultFaceTemplate()];
-      customAPI.states.faces = faceList;
-    }
-    if (faceList.length > 0) {
-      var faceIndex = robotState.currentFace;
-      if (faceIndex == null || faceIndex < 0 || faceIndex >= faceList.length) {
-        faceIndex = 0;
-      }
-      Face.faces = faceList;
-      Face.updateRobotFace(snapshot);
-    }
-  });
-
-  robotAPI.onRobotStatusChangedCustom(function (snapshot) {
-    // console.log(snapshot.val());
-    // var robotState = snapshot.val();
-    var robotState = snapshot;
-    updateRobotState(robotState);
-  });
-
-  var faceIndex = 0;
-
-  // Using BigQuery - log the parameters for the session start of the block
-  if (CustomAPI != null && CustomAPI != undefined && Config.bigQueryURL != null) {
-    var options = customAPI.getRobotOptions();
-    options['eventType'] = 'sessionStart';
-    options['robotId'] = robot.currentRobot;
-    options['robotState'] = snapshot;
-    var dataOut = {
-      data: options,
-    };
-    // console.log(dataOut);
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', Config.bigQueryURL, true);
-    xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
-    xhr.send(JSON.stringify(dataOut));
-  }
-
-  // Hidden - get value but do not display
-  // Make functions in control.js need to be changed
-  var faceList = customAPI.states.faces || null;
-  var screenList = customAPI.states.screens || null;
-  faceState = faceList;
-  screenState = screenList;
-  motorState = customAPI.states.motors || null;
-  poseState = customAPI.states.poses || null;
-
-  // Start by init'ing hidden structures
-  updateRobotState(snapshot);
-
-  // Speak control
-  // createStateChangeInterface('speakControls', snapshot, customAPI.actions.speak);
-  // Preset speak controls
-  createPresetSpeakControls();
-
-  console.log('Robot initialized: ' + robot.currentRobot);
-
 }
 
-// Speak both through the robot (if available) and locally via Web Speech API.
-function speakTextOutLoud(text) {
-  if (!text) {
-    return;
+function updateHandler(snapshot) {
+  let robotData = snapshot.val();
+  if (robotData?.customAPI) {
+    updateCustomRobotAPI(robotData.customAPI);
   }
+  if (robotData?.customAPI?.states?.faces) {
+    updateRobotFaceList(robotData.customAPI.states.faces);
+  }
+  if (robotData?.state) {
+    updateRobotState(robotData.state);
+  }
+}
 
-  if (robot && typeof robot.speak === 'function') {
-    robot.speak(text);
-  }
-
-  if ('speechSynthesis' in window) {
-    var utterance = new SpeechSynthesisUtterance(text);
-    var voices = window.speechSynthesis.getVoices();
-    if (voices && voices.length > 0) {
-      // Prefer an English voice when available; otherwise use the first.
-      var preferred =
-        voices.find(function (v) {
-          return v.lang && v.lang.toLowerCase().indexOf('en') === 0;
-        }) || voices[0];
-      utterance.voice = preferred;
-    }
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
-  } else {
-    console.warn('Web Speech API not supported in this browser; skipping local speech.');
-  }
+function updateRobotAPI(snapshot) {
+  robotAPI = snapshot.val();
 }
 
 function updateRobotState(snapshot) {
   if (customAPI != null && robotAPI != null) {
-    var robotState = snapshot || {};
+    // var robotState = snapshot.val();
+    var robotState = snapshot;
 
-    var apiStates = customAPI.states || {};
+    // FACE
+    Face.updateRobotFace(snapshot);
+
     var faceIndex = robotState.currentFace;
-    var faceList = apiStates.faces || [];
-    if (faceList.length === 0 && typeof getDefaultFaceTemplate === 'function') {
-      faceList = [getDefaultFaceTemplate()];
-      apiStates.faces = faceList;
-      customAPI.states = apiStates;
-    }
-    if (faceList.length > 0) {
-      Face.faces = faceList;
-    }
-
-    var screenList = apiStates.screens || (customAPI.inputs && customAPI.inputs.bellyScreens) || [];
-    if (screenList.length === 0 && customAPI.inputs && customAPI.inputs.bellyScreens && customAPI.inputs.bellyScreens.length > 0) {
-      screenList = customAPI.inputs.bellyScreens;
-    }
-    Belly.bellyScreens = screenList.length > 0 ? screenList : [];
-
-    if (Face && typeof Face.updateRobotFace === 'function') {
-      if (robotState.currentFace == null && faceList.length > 0) {
-        robotState.currentFace = 0;
-      }
-      Face.updateRobotFace(snapshot);
-    }
+    var faceList = customAPI.states.faces;
 
     // EYES
     var div = document.getElementById('faceControls');
     div.innerHTML = '';
-    if (faceList.length > 0) {
-      createStateChangeInterface(
-        'faceControls',
-        snapshot,
-        faceList,
-        faceIndex,
-        'Set robot eyes',
-        function () {
-          return 'Robot is looking at a ';
-        },
-        function () {
-          return ' face.';
-        },
-        function (robotState) {
-          var idx = robotState.currentFace;
-          return faceList[idx] ? faceList[idx].name : '';
-        },
-        robot.setFace.bind(robot),
-        'currentFace'
-      );
-    } else {
-      div.innerHTML = '<p class="text-muted">No faces available. Use Robot Setup to add faces.</p>';
-    }
+    createStateChangeInterface(
+      'faceControls',
+      'Eyes',
+      robotAPI.states.lookat,
+      robotAPI.states.lookat,
+      'lookatChanged',
+      robotState.currentEyes
+    );
 
-    // SCREEN
-    var div = document.getElementById('screenControls');
-    div.innerHTML = '';
-    var screenIndex = robotState.currentScreen;
-    if (screenList.length > 0) {
-      createStateChangeInterface(
-        'screenControls',
-        snapshot,
-        screenList,
-        screenIndex,
-        'Set robot screen',
-        function () {
-          return 'Robot screen will show ';
-        },
-        function () {
-          return '.';
-        },
-        function (robotState) {
-          var idx = robotState.currentScreen;
-          return screenList[idx] ? screenList[idx].name : '';
-        },
-        robot.setScreen.bind(robot),
-        'currentScreen'
-      );
-    } else {
-      div.innerHTML = '<p class="text-muted">No screens available. Use Belly Editor to add screens.</p>';
-    }
-
-    // POSES
-    var poseList = apiStates.poses || [];
-    var div = document.getElementById('poseControls');
-    div.innerHTML = '';
-    if (poseList.length > 0) {
-      poseList.forEach((elem, index) => {
-        if (elem != null) {
-          div.innerHTML +=
-            `<div class="btn-group" role="group" style="padding-bottom:4pt">` +
-            `<button type="button" class="btn btn-info" onclick="poseChanged(` +
-            index +
-            `, '` +
-            elem.name +
-            `')">` +
-            elem.name +
-            `</button></div>`;
-        }
-      });
-    } else {
-      div.innerHTML = '<p class="text-muted">No poses available.</p>';
-    }
-
-    // Set multiple motors at once (pose editor/sliders)
-    var poseControlDiv = document.getElementById('motorPoseControls');
-    poseControlDiv.innerHTML = '';
-    poseControlDiv.innerHTML =
-      '<div class="d-flex row flex-nowrap"><div class="col" id="poseMotorLabels"></div><div class="col-auto" id="poseMotorInputs"></div></div>';
-    var labelDiv = document.getElementById('poseMotorLabels');
-    var inputDiv = document.getElementById('poseMotorInputs');
-
-    motorState = normalizeMotors(apiStates.motors);
-
-    if (motorState && motorState.length > 0) {
-      motorState.forEach((elem, index) => {
-        var motorValue = 'value=' + (elem && elem.value ? parseInt(elem.value) : 0);
-        var motorName = elem && elem.name ? elem.name : 'Motor ' + index;
-        var motorMin = elem && elem.min != undefined ? parseInt(elem.min) : 1500;
-        var motorMax = elem && elem.max != undefined ? parseInt(elem.max) : 2500;
-
-        labelDiv.innerHTML +=
-          `<h3 class="pr-2" style="padding-top: 5pt">` + motorName + `: </h3>`;
-        inputDiv.innerHTML +=
-          `<div class="row" style="padding-bottom: 7pt"> <input class="col slider" type="range" id="poseControl` +
-          index +
-          `" min="` +
-          motorMin +
-          `" max="` +
-          motorMax +
-          `" ` +
-          motorValue +
-          ` oninput="manualPoseChanged()"></div>`;
-      });
-    } else {
-      labelDiv.innerHTML = '<p class="text-muted">No motor controls available.</p>';
-    }
-
-    // Individual motors
+    // MOTOR CONTROLS
     var div = document.getElementById('motorControls');
-    div.innerHTML = '';
     div.innerHTML =
       '<div class="d-flex row flex-nowrap"><div class="col" id="indivMotorLabels"></div><div class="col-auto" id="indivMotorInputs"></div></div>';
     var labelDiv = document.getElementById('indivMotorLabels');
     var inputDiv = document.getElementById('indivMotorInputs');
     if (robotState.motors) {
-      motorState = normalizeMotors(robotState.motors);
-      motorState.forEach((elem, index) => {
+      motorState = robotState.motors;
+      robotState.motors.forEach((elem, index) => {
         motorValue = 'value=' + (elem && elem.value ? parseInt(elem.value) : 0);
         motorName = elem && elem.name ? elem.name : 'Motor ' + index;
         motorMin = elem && elem.min != undefined ? parseInt(elem.min) : 1500;
@@ -314,58 +117,202 @@ function updateRobotState(snapshot) {
         labelDiv.innerHTML +=
           `<h3 class="pr-2" style="padding-top: 5pt">` + motorName + `: </h3>`;
         inputDiv.innerHTML +=
-          `<div class="row" style="padding-bottom: 7pt"> <button class="btn btn-info btn-sm mx-1" onclick="motorInputChanged(` +
+          `<div class="row" style="padding-bottom: 7pt"> <button class="btn btn-info btn-sm" onclick="incrementMotor(` +
+          index +
+          `,` +
+          `-1)" style="font-size: 2"><<</button><input style="height: 20%" type="range" min="` +
+          motorMin +
+          `" max="` +
+          motorMax +
+          `"` +
+          motorValue +
+          `
+          onchange="motorInputChanged(` +
           index +
           `,'` +
-          elem.name +
-          `',` +
-          `{'value':` +
-          motorMin +
-          `})"><<</button><input class="col slider" type="range" id="motorControl` +
+          motorName +
+          `',this)" ` +
+          motorValue +
+          ` ><button class="btn btn-info btn-sm" onclick="incrementMotor(` +
           index +
-          `" min="` +
+          `,` +
+          `1)" style="font-size: 2">>></button></input></div>`;
+      });
+    }
+
+    // MOTOR Pose CONTROLS
+    var div = document.getElementById('motorPoseControls');
+    div.innerHTML =
+      '<div class="d-flex flex-row row"><div class="col" id="poseMotorLabels"></div><div class="col" style="margin-bottom: 15pt" id="poseMotorInputs"></div></div>';
+    var labelDiv = document.getElementById('poseMotorLabels');
+    var inputDiv = document.getElementById('poseMotorInputs');
+    if (robotState.motors) {
+      motorState = robotState.motors;
+      robotState.motors.forEach((elem, index) => {
+        motorValue = 'value=' + (elem && elem.value ? parseInt(elem.value) : 0);
+        motorName = elem && elem.name ? elem.name : 'Motor ' + index;
+        motorMin = elem && elem.min != undefined ? parseInt(elem.min) : 1500;
+        motorMax = elem && elem.max != undefined ? parseInt(elem.max) : 2500;
+        labelDiv.innerHTML +=
+          `<h3 class="pr-2" style="padding-top: 5pt">` + motorName + `: </h3>`;
+        inputDiv.innerHTML +=
+          `<input style="height: 20%" id="poseControl` +
+          index +
+          `" type="range" min="` +
           motorMin +
           `" max="` +
           motorMax +
           `" ` +
           motorValue +
-          ` oninput="motorInputChanged(` +
-          index +
-          `,'` +
-          elem.name +
-          `',this)">` +
-          `<button class="btn btn-info btn-sm mx-1" onclick="motorInputChanged(` +
-          index +
-          `,'` +
-          elem.name +
-          `',` +
-          `{'value':` +
-          motorMax +
-          `})">>></button></div>`;
+          `>`;
       });
-    } else {
-      labelDiv.innerHTML = '<p class="text-muted">No motors in state.</p>';
     }
 
-    // Head touch indicator
-    var headTouchedDiv = document.getElementById('headTouched');
-    if (robotState.headTouched != null && robotState.headTouched != undefined) {
-      if (robotState.headTouched == true) {
-        headTouchedDiv.className = 'col-md align-content-center headTouched';
-        headTouchedDiv.innerHTML = '<h5>Head Touched</h5>';
-      } else {
-        headTouchedDiv.className = 'col-md align-content-center headNotTouched';
-        headTouchedDiv.innerHTML = '<h5>Head Not Touched</h5>';
+    var div = document.getElementById('headTouched');
+    // HEAD TOUCHED
+    if (robotState.headTouched != null) {
+      if (robotState.headTouched != 0) {
+        if (!isTouched) {
+          isTouched = true;
+          incrementMotor(0, -1);
+          console.log("Petting");
+          
+        }
+        div.innerHTML = `<button type="button" class="btn btn-success">Head Touched!!</button>`;
       }
-    } else {
-      headTouchedDiv.className = 'col-md align-content-center';
-      headTouchedDiv.innerHTML = '';
+      else {
+        if (isTouched) {
+          isTouched = false;
+          incrementMotor(0, 1);
+          console.log("Unpetting");
+          
+        }
+        div.innerHTML = `<button type="button" class="btn btn-danger">Head Not Touched</button>`;
+      }
     }
+    else {
+      div.innerHTML = `<button type="button" class="btn btn-danger">Head Not Touched</button>`;
+    }
+
+    // POSE CONTROLS
+    var div = document.getElementById('poseControls');
+    div.innerHTML =
+      '<div class="d-flex flex-row row"><div class="col" id="speedMotorLabels"></div><div class="col" style="margin-bottom: 15pt" id="speedMotorInputs"></div></div><div class="preset-controls" id="poses"></div>';
+    var labelDiv = document.getElementById('speedMotorLabels');
+    var inputDiv = document.getElementById('speedMotorInputs');
+    labelDiv.innerHTML += `<h3 class="pr-2" style="padding-top: 5pt">Excitement:</h3>`;
+    inputDiv.innerHTML += `<input style="height: 20%; margin-bottom: 20pt" type="range" min="0" max="100" value="` + robotState.excitement + `" onchange="excitementChanged(this)"></input>`;
+
+    if (robotState.poses) {
+      poseState = robotState.poses;
+      var div = document.getElementById('poses');
+      // div.innerHTML += '<div class="preset-controls">';
+      poseState.forEach((elem, index) => {
+        poseName = elem && elem.name ? elem.name : 'Pose ' + index;
+        div.innerHTML +=
+          `<div class='deletable-thumb'>
+            <div class='thumb-and-name'>
+              <button
+                type='button'
+                class='btn btn-info'
+                onclick="poseChanged(` +
+          index +
+          `,'` +
+          poseName +
+          `')"
+              >
+                ` +
+          poseName +
+          `
+              </button></div><div class='delete-x-button'>
+    <button
+      type='button'
+      onclick='deletePose(` +
+          index +
+          `)'
+      class='btn btn-secondary btn-circle-sm'
+      style='` +
+          (!elem.delete && 'visibility: hidden') +
+          `'
+    >
+      X
+    </button></div></div>`;
+      });
+    }
+    // div.innerHTML += '</div>';
+
+    // POSE CONTROLS
+    // var div = document.getElementById('animationControls');
+    // div.innerHTML =
+    //   '<div class="d-flex flex-row row"><div class="col" id="animationDelatMotorLabels"></div><div class="col" style="margin-bottom: 15pt" id="animationDelatMotorInputs"></div></div><div class="preset-controls" id="posesAnimation"></div><h3>Animation Sequence:</h3><div class="preset-controls" id="buildAnimation" style="display: inline-flex"></div>';
+    // var labelDiv = document.getElementById('animationDelatMotorLabels');
+    // var inputDiv = document.getElementById('animationDelatMotorInputs');
+    // labelDiv.innerHTML += `<h3 class="pr-2" style="padding-top: 1pt">Pose Delay:</h3>`;
+    // inputDiv.innerHTML += `<input style="height: 20%; margin-bottom: 10pt" type="range" min="0" max="100" value="50"></input>`;
+    // div.innerHTML +=
+    //   `<div class='thumb-and-name' style="padding-top: 5pt">
+    //           <button
+    //             type='button'
+    //             class='btn btn-success'
+    //             onclick="sentAnimationToRobot(` + `)"
+    //           >
+    //             ` +
+    //   'Send to Robot' +
+    //   `
+    //           </button></div>`;
+    // if (robotState.poses) {
+    //   poseState = robotState.poses;
+    //   var div = document.getElementById('posesAnimation');
+    //   // div.innerHTML += '<div class="preset-controls">';
+    //   poseState.forEach((elem, index) => {
+    //     poseName = elem && elem.name ? elem.name : 'Pose ' + index;
+    //     div.innerHTML +=
+    //       `
+    //         <div class='thumb-and-name'>
+    //           <button
+    //             type='button'
+    //             class='btn btn-info'
+    //             onclick="addToAnimation(` +
+    //       index +
+    //       `,'` +
+    //       poseName +
+    //       `')"
+    //           >
+    //             ` +
+    //       poseName +
+    //       `
+    //           </button></div>`;
+    //   });
+    // }
+    // div.innerHTML += '</div>';
+
+    // BELLY
+    Belly.updateRobotBelly(snapshot);
+    var screens = customAPI.inputs.bellyScreens;
+    var screenNames = [];
+    var screenIndexes = [];
+    for (var i = 0; i < screens.length; i++) {
+      screenNames.push(screens[i].name);
+      screenIndexes.push(i);
+    }
+    createStateChangeInterface(
+      'screenControls',
+      'Screens',
+      screenNames,
+      screenIndexes,
+      'bellyScreenChanged',
+      screenNames[robotState.currentBellyScreen]
+    );
   }
 }
 
-function createPresetSpeakControls() {
-  if (customAPI != null && robotAPI != null) {
+function updateCustomRobotAPI(snapshot) {
+  // customAPI = snapshot.val();
+  customAPI = snapshot;
+  Belly.bellyScreens = customAPI.inputs.bellyScreens;
+  Face.faces = customAPI.states.faces;
+
+  if (customAPI.actions != undefined) {
     var presetSpeakList = customAPI.actions.presetSpeak;
 
     if (presetSpeakList != null) {
@@ -382,67 +329,125 @@ function createPresetSpeakControls() {
 
 function createStateChangeInterface(
   divName,
-  snapshot,
-  stateList,
-  currentIndex,
-  headerText,
-  textIntro,
-  textOutro,
-  getStateNameFromRobotState,
-  setState,
-  stateKey
+  stateName,
+  options,
+  values,
+  changeFunctionName,
+  currentOption
 ) {
   var div = document.getElementById(divName);
 
-  var text = '';
-  text += '<h2>' + headerText + '</h2>';
-  text += '<p class="card-text font-weight-light">';
-  text += textIntro();
-  text +=
-    '<span id="' +
-    stateKey +
-    'Name">' +
-    getStateNameFromRobotState(snapshot) +
-    '</span>';
-  text += textOutro();
-  text += '</p>';
-
-  text += '<div class="row flex-nowrap green-scroll">';
-
-  text += '<div class="btn-group mr-2 py-2" role="group">';
-  for (var i = 0; i < stateList.length; i++) {
-    if (stateList[i] != null) {
-      var className = 'btn btn-light';
-      if (i == currentIndex) {
-        className = 'btn btn-warning';
-      }
-      text +=
-        "<button type='button' class='" +
-        className +
-        "' onclick='set" +
-        stateKey +
-        '(' +
-        i +
-        ")' id='set" +
-        stateKey +
-        'Button' +
-        i +
-        "'>";
-      text += stateList[i].name;
-      text += '</button>';
-    }
+  var optionHTML =
+    "<div class='btn-group btn-group-toggle flex-wrap' data-toggle='buttons'>";
+  for (var i = 0; i < options.length; i++) {
+    optionHTML += "<label class='btn btn-secondary ";
+    if (options[i] == currentOption) optionHTML += 'active';
+    optionHTML +=
+      "'> <input type='radio' name='" +
+      stateName +
+      "' autocomplete='off' id='" +
+      values[i] +
+      "'";
+    if (options[i] == currentOption) optionHTML += 'checked';
+    optionHTML +=
+      "' onchange='" +
+      changeFunctionName +
+      "(this)'>" +
+      options[i] +
+      '</label>';
   }
-  text += '</div>';
+  optionHTML += '</div>';
+  div.innerHTML = optionHTML;
+}
 
-  text += '</div>';
-  div.innerHTML = text;
+function neckValueChanged(target) {
+  const panElement = document.getElementById('pan');
+  const pan = panElement.value;
+  const tiltElement = document.getElementById('tilt');
+  const tilt = tiltElement.value;
+  robot.moveNeck(pan, tilt);
+}
 
-  window['set' + stateKey] = function (index) {
-    var robotState = snapshot;
-    robotState[stateKey] =
-      index >= 0 && index < stateList.length ? index : robotState[stateKey];
-    setState(robotState, stateList);
-  };
+function lookatChanged(target) {
+  robot.setEyes(target.id);
+}
+
+function bellyScreenChanged(target) {
+  robot.setScreen(target.id);
+}
+
+function addToAnimation(index, name) {
+  currAnimation.push(poseState[index]);
+  renderCurrentAnimation()
+}
+
+function renderCurrentAnimation() {
+  var div = document.getElementById('buildAnimation');
+  div.innerHTML = '';
+  currAnimation.forEach((elem, index) => {
+    poseName = elem && elem.name ? elem.name : 'Pose ' + index;
+    div.innerHTML +=
+      `<div class='deletable-thumb'>
+              <div class='thumb-and-name'>
+                <button
+                  type='button'
+                  class='btn btn-success'
+                  onclick="addToAnimation(` +
+      index +
+      `,'` +
+      poseName +
+      `')"
+                >
+                  ` +
+      poseName +
+      `
+                </button></div><div class='delete-x-button'>
+      <button
+        type='button'
+        onclick='deletePoseFromAnimation(` +
+      index +
+      `)'
+        class='btn btn-secondary btn-circle-sm'
+      >
+        X
+      </button></div></div>`;
+  });
+}
+
+function sendAnimationToRobot() {
+
+}
+
+function incrementMotor(index, direction) {
+  delta =
+    (motorState[index].max - motorState[index].min) * 0.1 * parseInt(direction);
+  if (parseInt(direction) < 0) {
+    delta = Math.ceil(delta);
+  } else {
+    delta = Math.floor(delta);
+  }
+  if (motorState[index].value + delta < motorState[index].min) {
+    robot.setMotor(
+      index,
+      motorState[index].name,
+      motorState[index].min,
+      motorState
+    );
+  } else if (motorState[index].value + delta > motorState[index].max) {
+    robot.setMotor(
+      index,
+      motorState[index].name,
+      motorState[index].max,
+      motorState
+    );
+  } else {
+    robot.setMotor(
+      index,
+      motorState[index].name,
+      motorState[index].value + delta,
+      motorState
+    );
+  }
 }
 
 function motorInputChanged(index, name, target) {
@@ -450,7 +455,7 @@ function motorInputChanged(index, name, target) {
 }
 
 function excitementChanged(target) {
-  value = target.value;
+  value = target.value
   if (value > 0 && value < 100) {
     // console.log(value);
     robot.setExcitement(target.value);
@@ -473,26 +478,43 @@ function poseChanged(index, name) {
 }
 
 function saveAsPose() {
-  var text = document.getElementById('savePoseText').value;
-  robot.savePose(text, motorState);
+  let newPoseState = [...poseState];
+  newPoseState.push({
+    lastPressed: 0,
+    motors: motorState.map((elem, index) =>
+      parseInt(document.getElementById('poseControl' + index).value)
+    ),
+    name: document.getElementById('savePoseText').value,
+    delete: 1,
+  });
+  robot.saveNewPose(newPoseState);
 }
 
-function headTouched() {
-  // To be done if needed
+function deletePose(index) {
+  robot.deletePose(index, poseState);
 }
 
+function deletePoseFromAnimation(index) {
+  currAnimation = currAnimation.filter((item, idx) => index !== idx);
+  renderCurrentAnimation();
+}
+
+/*Callback for dynamically created button*/
 function sayPreset(target) {
-  var text = target.innerHTML;
-  speakTextOutLoud(text);
+  console.log('will say:' + target.innerHTML);
+  robot.speak(target.innerHTML);
 }
 
 function speakPressed() {
   var speakText = document.getElementById('speakText');
   var text = speakText.value;
-  console.log('Speaking');
-  console.log('will say:' + text);
+  var newButtonsDiv = document.getElementById('userAdded');
+  newButtonsDiv.innerHTML +=
+    "<button class='btn btn-warning' onclick='sayPreset(this)'>" +
+    text.replace("'", '') +
+    '</button>';
   // requestRobotAction("speak", {text:text});
-  speakTextOutLoud(text);
+  robot.speak(text);
 }
 
 function bubblePressed() {

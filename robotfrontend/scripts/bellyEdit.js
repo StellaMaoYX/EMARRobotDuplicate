@@ -1024,7 +1024,7 @@ function changeScreenElement(target, screenID, itemID) {
   }
 
   if (target.name == 'buttonAddImage') {
-    https: var buttonNameTextInput = document.getElementById(
+    var buttonNameTextInput = document.getElementById(
       'buttonAdd' + screenID
     );
     if (bellyScreens[screenID].buttons.list == undefined)

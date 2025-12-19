@@ -2,6 +2,7 @@ var config = new Config();
 var db = new Database(config.config, initializeControl);
 var robots = null;
 var admins = null;
+var is
 
 function initializeControl() {
   /* Register database callbacks */
