@@ -1070,7 +1070,7 @@ function changeScreenElement(target, screenID, itemID) {
         y: 0,
       },
       path:
-        'https://res.cloudinary.com/demo/image/upload/sample.jpg',
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/No-Image-Placeholder.svg/1665px-No-Image-Placeholder.svg.png',
       size: {
         // Changes new images
         x: 150,
@@ -1097,7 +1097,7 @@ function changeScreenElement(target, screenID, itemID) {
         buttonNameTextInput.value +
         '</p>',
       path:
-        'https://res.cloudinary.com/demo/image/upload/sample.jpg',
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/No-Image-Placeholder.svg/1665px-No-Image-Placeholder.svg.png',
       lastPressed: 0,
     });
   }
