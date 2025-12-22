@@ -24,9 +24,11 @@ function loadRobotInfo(snapshot) {
   var robotListHTML = "";
   var robots = database.robots;
   robotNames = [];
-  for (var i=0; i<robots.length; i++) {
-    robotNames.push(robots[i].name);
-    robotListHTML += "<a class='dropdown-item' href='#' onclick='setRobot(" + i + ")'>" + robots[i].name + "</a>";
+  if (robots) {
+    for (var i=0; i<robots.length; i++) {
+      robotNames.push(robots[i].name);
+      robotListHTML += "<a class='dropdown-item' href='#' onclick='setRobot(" + i + ")'>" + robots[i].name + "</a>";
+    }
   }
   var robotsDiv = document.getElementById("robots");
   robotsDiv.innerHTML = robotListHTML;

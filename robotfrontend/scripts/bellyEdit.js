@@ -1445,67 +1445,69 @@ function displaySavedScreens() {
   while (parent.firstChild) {
     parent.removeChild(parent.firstChild)
   }
-  for (let i = 0; i < savedScreens.length; i++) {
-    console.log(savedScreens[i])
-    
-    const screen_panel = document.createElement("div");
-    screen_panel.style.display = "flex";
-    screen_panel.style.flexDirection = "row";
-    screen_panel.style.alignItems = "center";
+  if (savedScreens) {
+    for (let i = 0; i < savedScreens.length; i++) {
+      console.log(savedScreens[i])
+      
+      const screen_panel = document.createElement("div");
+      screen_panel.style.display = "flex";
+      screen_panel.style.flexDirection = "row";
+      screen_panel.style.alignItems = "center";
 
-    const panel_text = document.createElement("h5");
+      const panel_text = document.createElement("h5");
 
-    const paste = document.createElement("button");
-    paste.type = "submit"
-    paste.class = "btn btn-primary mb-2"
-    paste.innerText = "Paste"
-    paste.style.margin = "5px"
+      const paste = document.createElement("button");
+      paste.type = "submit"
+      paste.class = "btn btn-primary mb-2"
+      paste.innerText = "Paste"
+      paste.style.margin = "5px"
 
-    // If the list item is a dictionary containing all the screens for a robot
-    if (savedScreens[i].hasOwnProperty("screens")) {
-      panel_text.innerText = "Robot: " + savedScreens[i]["robot"]
+      // If the list item is a dictionary containing all the screens for a robot
+      if (savedScreens[i].hasOwnProperty("screens")) {
+        panel_text.innerText = "Robot: " + savedScreens[i]["robot"]
 
-      paste.onclick = function() {
-        for (screen in savedScreens[i]["screens"]) {
-          add_screen = savedScreens[i]["screens"][screen];
-          add_screen.name = 'Screen-' + (bellyScreens.length + 1);
-          add_screen.robot = currentRobot;
-          bellyScreens.push(add_screen);
+        paste.onclick = function() {
+          for (screen in savedScreens[i]["screens"]) {
+            add_screen = savedScreens[i]["screens"][screen];
+            add_screen.name = 'Screen-' + (bellyScreens.length + 1);
+            add_screen.robot = currentRobot;
+            bellyScreens.push(add_screen);
+            var dir = 'robots/' + currentRobot + '/customAPI/inputs/';
+            var dbRef = firebase.database().ref(dir);
+            dbRef.update({ bellyScreens: bellyScreens });
+          }
+        }
+      } else { // If the list item is a single robot screen
+        panel_text.innerText = "Robot: " + savedScreens[i].robot + " | " + savedScreens[i].name
+
+        paste.onclick = function() {
+          console.log(savedScreens[i])
+          new_screen = savedScreens[i]
+          new_screen.name = 'Screen-' + (bellyScreens.length + 1);
+          new_screen.robot = currentRobot;
+          bellyScreens.push(new_screen);
           var dir = 'robots/' + currentRobot + '/customAPI/inputs/';
           var dbRef = firebase.database().ref(dir);
           dbRef.update({ bellyScreens: bellyScreens });
         }
       }
-    } else { // If the list item is a single robot screen
-      panel_text.innerText = "Robot: " + savedScreens[i].robot + " | " + savedScreens[i].name
-
-      paste.onclick = function() {
-        console.log(savedScreens[i])
-        new_screen = savedScreens[i]
-        new_screen.name = 'Screen-' + (bellyScreens.length + 1);
-        new_screen.robot = currentRobot;
-        bellyScreens.push(new_screen);
-        var dir = 'robots/' + currentRobot + '/customAPI/inputs/';
-        var dbRef = firebase.database().ref(dir);
-        dbRef.update({ bellyScreens: bellyScreens });
+    
+      const remove = document.createElement("button");
+      remove.type = "submit"
+      remove.class = "btn btn-danger"
+      remove.innerText = "Remove"
+      remove.style.margin = "5px"
+      remove.onclick = function() {
+        savedScreens = savedScreens.filter(function(e) { return e !== savedScreens[i] });
+        localStorage.setItem('savedScreens', JSON.stringify(savedScreens));
+        displaySavedScreens();
       }
-    }
-  
-    const remove = document.createElement("button");
-    remove.type = "submit"
-    remove.class = "btn btn-danger"
-    remove.innerText = "Remove"
-    remove.style.margin = "5px"
-    remove.onclick = function() {
-      savedScreens = savedScreens.filter(function(e) { return e !== savedScreens[i] });
-      localStorage.setItem('savedScreens', JSON.stringify(savedScreens));
-      displaySavedScreens();
-    }
 
-    screen_panel.append(panel_text)
-    screen_panel.append(paste)
-    screen_panel.append(remove)
-    parent.appendChild(screen_panel)
+      screen_panel.append(panel_text)
+      screen_panel.append(paste)
+      screen_panel.append(remove)
+      parent.appendChild(screen_panel)
+    }
   }
 }
 
