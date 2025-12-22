@@ -1,3 +1,7 @@
+// ================= Configuration Cloudinary =================
+const CLOUDINARY_CLOUD_NAME = "dcqqsp2kz"; 
+const CLOUDINARY_PRESET = "kolywy3s";
+
 var config = new Config();
 var db = new Database(config.config, initializeEdit);
 
@@ -523,32 +527,90 @@ function addDynamicMoodViz() {
 }
 
 
-
-
 function uploadImage(target, index) {
-  console.log(target, index);
-  var file = document.querySelectorAll('input[type=file]')[index].files[0];
-  var storageRef = firebase.storage().ref();
-  var split = target.value.split('\\');
-  console.log(db);
-  var ref = storageRef.child(
-    'images/' + db.uid + '/' + split[split.length - 1]
-  );
-  ref.put(file).then(async function (snapshot) {
-    url = await snapshot.ref.getDownloadURL();
-    // console.log('url', url);
-    // Update Image
+  console.log("Starting upload to Cloudinary...");
+  
+  // 1. Get the file selected by the user
+  var fileInput = document.querySelectorAll('input[type=file]')[index];
+  if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+    console.error("No file found");
+    return;
+  }
+  var file = fileInput.files[0];
+
+  // 2. Prepare upload data
+  var formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", CLOUDINARY_PRESET); 
+
+  // 3. Build the upload URL
+  var uploadUrl = "https://api.cloudinary.com/v1_1/" + CLOUDINARY_CLOUD_NAME + "/image/upload";
+
+  // 4. Send the request
+  fetch(uploadUrl, {
+    method: "POST",
+    body: formData
+  })
+  .then(response => {
+    if (!response.ok) {
+      // If error, throw it to catch block
+      return response.json().then(err => { throw err; });
+    }
+    return response.json();
+  })
+  .then(data => {
+    // 5. Upload success! Get the image URL (secure_url)
+    console.log("Upload success! Image URL:", data.secure_url);
+    
+    // 6. Save the new URL to Firebase Database
+    // This ensures the app loads this specific image next time
     changeScreenElement(
       {
-        index,
-        value: url,
+        index: index,
+        value: data.secure_url, 
         name: 'images',
       },
       selectedBellyScreen,
       ''
     );
+    
+    alert("Image uploaded successfully!");
+  })
+  .catch(error => {
+    console.error("Upload error:", error);
+    // Alert the user about the error
+    if (error.error && error.error.message) {
+       alert("Upload failed: " + error.error.message);
+    } else {
+       alert("Upload failed. Please check the Console (F12) for details.");
+    }
   });
 }
+
+// function uploadImage(target, index) {
+//   console.log(target, index);
+//   var file = document.querySelectorAll('input[type=file]')[index].files[0];
+//   var storageRef = firebase.storage().ref();
+//   var split = target.value.split('\\');
+//   console.log(db);
+//   var ref = storageRef.child(
+//     'images/' + db.uid + '/' + split[split.length - 1]
+//   );
+//   ref.put(file).then(async function (snapshot) {
+//     url = await snapshot.ref.getDownloadURL();
+//     // console.log('url', url);
+//     // Update Image
+//     changeScreenElement(
+//       {
+//         index,
+//         value: url,
+//         name: 'images',
+//       },
+//       selectedBellyScreen,
+//       ''
+//     );
+//   });
+// }
 
 function setScreenColor(element) {
   addRemoveScreenElements(element, selectedBellyScreen);
@@ -1008,7 +1070,7 @@ function changeScreenElement(target, screenID, itemID) {
         y: 0,
       },
       path:
-        'https://firebasestorage.googleapis.com/v0/b/emar-database.appspot.com/o/images%2Fnoun_Image_3565539.png?alt=media&token=a22bd7fd-677e-4b38-8913-76e74cf61bd2',
+        'https://res.cloudinary.com/demo/image/upload/sample.jpg',
       size: {
         // Changes new images
         x: 150,
@@ -1035,7 +1097,7 @@ function changeScreenElement(target, screenID, itemID) {
         buttonNameTextInput.value +
         '</p>',
       path:
-        'https://firebasestorage.googleapis.com/v0/b/emar-database.appspot.com/o/images%2Fnoun_Image_3565539.png?alt=media&token=a22bd7fd-677e-4b38-8913-76e74cf61bd2',
+        'https://res.cloudinary.com/demo/image/upload/sample.jpg',
       lastPressed: 0,
     });
   }
