@@ -94,3 +94,7 @@ function startController() {
   window.location.href = "control.html?robot=" + currentRobot;
 }
 
+function startFlexi() {
+  window.location.href = "flexi.html?robot=" + currentRobot;
+}
+
