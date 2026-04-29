@@ -408,19 +408,16 @@ function pushToStudent() {
     return;
   }
 
-  if (robotConnected) {
-    // Write to Firebase under /robots/{robotId}/flexi/pushed
-    try {
-      firebase.database()
-        .ref(`/robots/${currentRobotId}/flexi/pushed`)
-        .set(activity)
-        .then(() => { showPushStatus('✓ Pushed to student screen!', 'ok'); startWaitingMotion(); showAnsweringState(); })
-        .catch(e => showPushStatus('Firebase error: ' + e.message, 'error'));
-    } catch (e) {
-      showPushStatus('Firebase unavailable — no robot connected.', 'error');
-    }
-  } else {
-    showPushStatus('Not connected to Firebase. Connect a robot to push live.', 'error');
+  // Push to Firebase regardless of robot hardware status
+  // (robot connection only affects physical robot actions like speak/moveNeck)
+  try {
+    firebase.database()
+      .ref(`/robots/${currentRobotId}/flexi/pushed`)
+      .set(activity)
+      .then(() => { showPushStatus('✓ Pushed to student screen!', 'ok'); startWaitingMotion(); showAnsweringState(); })
+      .catch(e => showPushStatus('Firebase error: ' + e.message, 'error'));
+  } catch (e) {
+    showPushStatus('Firebase unavailable — check your connection.', 'error');
   }
 }
 
@@ -482,7 +479,7 @@ function playStuckMotion() {
 
 // ── Teacher Commands ───────────────────────────────────────────────────────
 function sendCommand(type) {
-  if (!robotConnected) return;
+  // if (!robotConnected) return;
   try {
     firebase.database()
       .ref(`/robots/${currentRobotId}/flexi/command`)
