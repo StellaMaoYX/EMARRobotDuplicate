@@ -332,7 +332,7 @@ function pushToStudent() {
       firebase.database()
         .ref(`/robots/${currentRobotId}/flexi/pushed`)
         .set(activity)
-        .then(() => showPushStatus('✓ Pushed to student screen!', 'ok'))
+        .then(() => { showPushStatus('✓ Pushed to student screen!', 'ok'); startWaitingMotion(); })
         .catch(e => showPushStatus('Firebase error: ' + e.message, 'error'));
     } catch (e) {
       showPushStatus('Firebase unavailable — no robot connected.', 'error');
@@ -347,6 +347,55 @@ function showPushStatus(msg, type) {
   el.textContent = msg;
   el.className   = `push-status ${type}`;
   setTimeout(() => { el.textContent = ''; el.className = 'push-status'; }, 4000);
+}
+
+// ── Robot Motion ───────────────────────────────────────────────────────────
+let waitingMotionInterval = null;
+
+function startWaitingMotion() {
+  if (!robotConnected || !robot || !Robot.currentMotorState) return;
+  stopWaitingMotion();
+  let toggle = 1;
+  try {
+    robot.moveNeck(8, 0, 0, 0);
+    waitingMotionInterval = setInterval(() => {
+      if (!Robot.currentMotorState) return;
+      toggle = -toggle;
+      robot.moveNeck(toggle * 16, 0, 0, 0);
+    }, 2000);
+  } catch (e) {}
+}
+
+function stopWaitingMotion() {
+  if (waitingMotionInterval) {
+    clearInterval(waitingMotionInterval);
+    waitingMotionInterval = null;
+  }
+}
+
+function playCorrectMotion() {
+  if (!robotConnected || !robot || !Robot.currentMotorState) return;
+  stopWaitingMotion();
+  try {
+    robot.moveNeck(0, 15, 0, 0);
+    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(0, 0, 0, -25); }, 500);
+    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(0, 0, 0,  50); }, 1000);
+    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(0, 0, 0, -50); }, 1500);
+    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(0, 0, 0,  25); }, 2000);
+  } catch (e) {}
+}
+
+function playStuckMotion() {
+  if (!robotConnected || !robot || !Robot.currentMotorState) return;
+  stopWaitingMotion();
+  try {
+    robot.moveNeck(0, -15, 0, 0);
+    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(0, 0, 0, -25); }, 500);
+    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(0, 0, 0,  50); }, 1000);
+    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(0, 0, 0, -50); }, 1500);
+    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(0, 0, 0,  25); }, 2000);
+    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(0, 15, 0, 0); }, 2500);
+  } catch (e) {}
 }
 
 // ── Teacher Commands ───────────────────────────────────────────────────────
@@ -377,7 +426,6 @@ function setLevel(level) {
 
 // ── Student Result Listener ────────────────────────────────────────────────
 function listenForResults() {
-  if (!robotConnected) return;
   try {
     firebase.database()
       .ref(`/robots/${currentRobotId}/flexi/result`)
@@ -394,21 +442,13 @@ function handleStudentResult(isCorrect) {
   const activity = readActivity();
 
   if (isCorrect) {
-    updateResultBox(true);
-    // Robot: speak success phrase + celebratory neck nod
+    updateResultBox(true, activity.successPhrase || '');
     robotSpeak(activity.successPhrase || 'Wonderful! You did it!');
-    if (robotConnected && robot && Robot.currentMotorState) {
-      try {
-        robot.moveNeck(0, 15, 0, 0);
-        setTimeout(() => {
-          if (Robot.currentMotorState) robot.moveNeck(0, -15, 0, 0);
-        }, 700);
-      } catch (e) { /* motor not configured */ }
-    }
+    playCorrectMotion();
   } else {
     updateResultBox(false);
-    // Robot: say stuck phrase (robot physically freezes — no motor commands sent)
     robotSpeak(STUCK_PHRASE);
+    playStuckMotion();
   }
 }
 
@@ -418,20 +458,22 @@ function robotSpeak(text) {
   }
 }
 
-function updateResultBox(isCorrect) {
+function updateResultBox(isCorrect, successPhrase) {
   const box = document.getElementById('resultBox');
   const now = new Date().toLocaleTimeString();
   if (isCorrect) {
-    box.className  = 'result-box correct';
-    box.innerHTML  = `
-      <div class="result-emoji">✅</div>
-      <div class="result-label">Correct!</div>
+    box.className = 'result-box correct';
+    box.innerHTML = `
+      <div class="result-emoji">🎉</div>
+      <div class="result-label">Amazing! You got it right!</div>
+      ${successPhrase ? `<div class="result-sub">${esc(successPhrase)}</div>` : ''}
       <div class="result-time">at ${now}</div>`;
   } else {
-    box.className  = 'result-box incorrect';
-    box.innerHTML  = `
+    box.className = 'result-box incorrect';
+    box.innerHTML = `
       <div class="result-emoji">🤔</div>
-      <div class="result-label">Not quite — let's try again</div>
+      <div class="result-label">Hmm, I'm stuck…</div>
+      <div class="result-sub">Let's try that again!</div>
       <div class="result-time">at ${now}</div>`;
   }
 }

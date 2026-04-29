@@ -235,12 +235,15 @@
       border: 2px solid #e0e4f0;
       margin-bottom: 4px;
     }
-    .result-box.waiting  { background: #f8f9fe; }
-    .result-box.correct  { background: #eafaf1; border-color: #1a7a4a; }
-    .result-box.incorrect { background: #fdf2f2; border-color: #c0392b; }
+    .result-box.waiting   { background: #f8f9fe; }
+    .result-box.correct   { background: #146e3c; border-color: #146e3c; color: white; }
+    .result-box.incorrect { background: #46465a; border-color: #46465a; color: white; }
+    .result-box.correct .result-time,
+    .result-box.incorrect .result-time { color: rgba(255,255,255,0.55); }
     .result-emoji { font-size: 2rem; margin-bottom: 4px; }
     .result-label { font-weight: bold; font-size: 0.95rem; }
-    .result-time  { font-size: 0.75rem; color: #999; margin-top: 2px; }
+    .result-sub   { font-size: 0.88rem; margin-top: 3px; opacity: 0.88; }
+    .result-time  { font-size: 0.75rem; color: #999; margin-top: 4px; }
 
     /* ── Control buttons ── */
     .ctrl-btn {
