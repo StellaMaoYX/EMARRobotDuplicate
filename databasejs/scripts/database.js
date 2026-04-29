@@ -27,6 +27,8 @@ function Database(config, readyCallback) {
   Database.initialize = async function() {
     Database.app = await firebase.initializeApp(Database.config);
     firebase.auth().onAuthStateChanged(Database.handleAuthStateChange);
+    // Handle the result after returning from Google redirect sign-in
+    firebase.auth().getRedirectResult().catch(Database.handleError);
   }
   
   /*
@@ -69,16 +71,7 @@ function Database(config, readyCallback) {
     if (Database.userEmail == null) {
       var provider = new firebase.auth.GoogleAuthProvider();
       firebase.auth().useDeviceLanguage();
-      firebase
-        .auth()
-        .signInWithPopup(provider)
-        .then(function (result) {
-          // This gives you a Google Access Token. You can use it to access the Google API.
-          var token = result.credential.accessToken;
-          // The signed-in user info.
-          var user = result.user;
-        })
-        .catch(Database.handleError);
+      firebase.auth().signInWithRedirect(provider);
     }
   }
 
