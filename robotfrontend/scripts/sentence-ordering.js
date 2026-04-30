@@ -471,19 +471,12 @@ let waitingMotionInterval = null;
 function startWaitingMotion() {
   if (!robotConnected || !robot || !Robot.currentMotorState) return;
   stopWaitingMotion();
-  let toggle = 1;
   try {
-    // Reset head from max-up (U/D=2682) to neutral (~1100 units below max)
-    robot.moveNeck(0, -1500, 0, 0);
-    setTimeout(() => {
-      if (!Robot.currentMotorState) return;
-      robot.moveNeck(150, 0, 0, 0);
-      waitingMotionInterval = setInterval(() => {
-        if (!Robot.currentMotorState) return;
-        toggle = -toggle;
-        robot.moveNeck(toggle * 300, 0, 0, 0);
-      }, 2000);
-    }, 500);
+    // Reset head to neutral, then tilt left/right 3 times and stop
+    robot.moveNeck(0, -1100, 0, 0);
+    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck( 150, 0, 0, 0); }, 600);   // tilt right (1)
+    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(-300, 0, 0, 0); }, 1200);  // tilt left  (2)
+    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck( 150, 0, 0, 0); }, 1800);  // back center (3)
   } catch (e) {}
 }
 
@@ -498,13 +491,13 @@ function playCorrectMotion() {
   if (!robotConnected || !robot || !Robot.currentMotorState) return;
   stopWaitingMotion();
   try {
-    // Positive tilt = raise head (happy)
-    robot.moveNeck(0, 200, 0, 0);
-    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(0, 0, 0, -300); }, 600);
-    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(0, 0, 0,  600); }, 1200);
-    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(0, 0, 0, -600); }, 1800);
-    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(0, 0, 0,  300); }, 2400);
-    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(0, -200, 0,  0); }, 3000);  // return to neutral
+    // Tilt up/down 3 times, return to starting position
+    robot.moveNeck(0,  200, 0, 0);                                                             // up   (1)
+    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(0, -400, 0, 0); }, 500);   // down
+    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(0,  400, 0, 0); }, 1000);  // up   (2)
+    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(0, -400, 0, 0); }, 1500);  // down
+    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(0,  400, 0, 0); }, 2000);  // up   (3)
+    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(0, -200, 0, 0); }, 2500);  // return to neutral
   } catch (e) {}
 }
 

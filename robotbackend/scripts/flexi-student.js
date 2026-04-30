@@ -125,9 +125,6 @@ function renderScaffold() {
 
 // ── Language Level ─────────────────────────────────────────────────────────
 function getLevelText(item) {
-  const words = item.text.split(' ');
-  if (languageLevel === 'word')   return words.slice(0, 2).join(' ');
-  if (languageLevel === 'phrase') return words.slice(0, Math.ceil(words.length / 2)).join(' ');
   return item.text;
 }
 
