@@ -475,8 +475,8 @@ function startWaitingMotion() {
     // Reset head to neutral, then tilt left/right 3 times and stop
     robot.moveNeck(0, -1100, 0, 0);
     setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck( 150, 0, 0, 0); }, 600);   // tilt right (1)
-    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(-300, 0, 0, 0); }, 1200);  // tilt left  (2)
-    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck( 150, 0, 0, 0); }, 1800);  // back center (3)
+    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck(-450, 0, 0, 0); }, 1200);  // tilt left  (2)
+    setTimeout(() => { if (Robot.currentMotorState) robot.moveNeck( 300, 0, 0, 0); }, 1800);  // back center (3)
   } catch (e) {}
 }
 
