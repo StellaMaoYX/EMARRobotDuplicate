@@ -10,6 +10,10 @@
  *   result   – result the student submitted
  * ═══════════════════════════════════════════════════════════════════════════ */
 
+// ── Cloudinary Config ──────────────────────────────────────────────────────
+const CLOUDINARY_CLOUD_NAME = 'dcqqsp2kz';
+const CLOUDINARY_PRESET     = 'kolywy3s';
+
 // ── Preset Activities ──────────────────────────────────────────────────────
 const PRESETS = [
   {
@@ -392,10 +396,76 @@ function buildRow(index, text, imgUrl) {
     <span class="item-order-num">${index + 1}</span>
     <div class="item-fields">
       <input class="item-text-input" type="text" placeholder="Word or sentence…" value="${esc(text)}">
-      <input class="item-img-input"  type="url"  placeholder="Image URL (optional)" value="${esc(imgUrl)}">
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input class="item-img-input" type="url"
+               placeholder="Image URL (optional — or upload ▶)"
+               value="${esc(imgUrl)}"
+               style="flex:1;">
+        <label style="cursor:pointer;white-space:nowrap;padding:4px 9px;
+                      background:#1a56a0;color:white;border-radius:7px;
+                      font-size:0.8rem;flex-shrink:0;" title="Upload image from computer">
+          📤 Upload
+          <input type="file" accept="image/*" style="display:none"
+                 onchange="uploadItemImage(this)">
+        </label>
+      </div>
+      <div class="item-img-preview" style="display:${imgUrl ? 'block' : 'none'};margin-top:4px;">
+        ${imgUrl ? `<img src="${esc(imgUrl)}" style="max-height:56px;border-radius:6px;border:1px solid #dde;">` : ''}
+      </div>
     </div>
     <button class="item-remove" onclick="removeEditorItem(this)" title="Remove">&#10005;</button>`;
+
+  // Sync preview when URL is typed manually
+  const urlInput = row.querySelector('.item-img-input');
+  const preview  = row.querySelector('.item-img-preview');
+  urlInput.addEventListener('change', () => {
+    const url = urlInput.value.trim();
+    preview.style.display = url ? 'block' : 'none';
+    preview.innerHTML     = url
+      ? `<img src="${url}" style="max-height:56px;border-radius:6px;border:1px solid #dde;">`
+      : '';
+  });
+
   return row;
+}
+
+function uploadItemImage(fileInput) {
+  const file = fileInput.files && fileInput.files[0];
+  if (!file) return;
+
+  const row         = fileInput.closest('.editor-item');
+  const urlInput    = row.querySelector('.item-img-input');
+  const preview     = row.querySelector('.item-img-preview');
+  const uploadLabel = fileInput.parentElement;
+  const origText    = uploadLabel.childNodes[0].textContent;
+
+  uploadLabel.childNodes[0].textContent = ' Uploading…';
+  uploadLabel.style.background = '#888';
+
+  const formData = new FormData();
+  formData.append('file',          file);
+  formData.append('upload_preset', CLOUDINARY_PRESET);
+
+  fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+    method: 'POST',
+    body:   formData,
+  })
+    .then(res => res.ok ? res.json() : res.json().then(err => { throw err; }))
+    .then(data => {
+      urlInput.value        = data.secure_url;
+      preview.style.display = 'block';
+      preview.innerHTML     = `<img src="${data.secure_url}" style="max-height:56px;border-radius:6px;border:1px solid #dde;">`;
+      uploadLabel.childNodes[0].textContent = origText;
+      uploadLabel.style.background = '#1a56a0';
+    })
+    .catch(err => {
+      console.error('Image upload failed:', err);
+      alert('Image upload failed. Check the console for details.');
+      uploadLabel.childNodes[0].textContent = origText;
+      uploadLabel.style.background = '#1a56a0';
+    });
+
+  fileInput.value = '';
 }
 
 function esc(s) {
